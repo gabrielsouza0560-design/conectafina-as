@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ChevronLeft, ChevronRight, Circle, CheckCircle, AlertTriangle, CreditCard } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Circle, CheckCircle, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../hooks/useData';
-import { incomeService, expenseService, fixedExpenseService, installmentService, cardService } from '../services/api';
+import { incomeService, expenseService, fixedExpenseService, cardService } from '../services/api';
 import { Card, CardSkeleton } from '../components/ui';
 import { formatCurrency, getMonthName } from '../utils/format';
-import type { Income, Expense, FixedExpense, Installment, CreditCard as CardType } from '../types';
+import type { Income, Expense, FixedExpense, CreditCard as CardType } from '../types';
 
 interface DayEvent {
   id: string;
@@ -26,7 +26,7 @@ export function CalendarPage() {
   const { data: incomes, loading: l1 } = useData<Income>((c) => incomeService.list(c));
   const { data: expenses, loading: l2 } = useData<Expense>((c) => expenseService.list(c));
   const { data: bills, loading: l3 } = useData<FixedExpense>((c) => fixedExpenseService.list(c));
-  const { data: cards } = useData<CardType>((c) => cardService.list(c));
+  const { data: _cards } = useData<CardType>((c) => cardService.list(c));
 
   const loading = l1 || l2 || l3;
 

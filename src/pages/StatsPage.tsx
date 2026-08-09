@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, TrendingUp, TrendingDown, PieChart, BarChart3 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell } from 'recharts';
 import { useData } from '../hooks/useData';
 import { incomeService, expenseService, cardTransactionService } from '../services/api';
 import { Card, CardSkeleton } from '../components/ui';
@@ -154,7 +154,7 @@ export function StatsPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                  <Tooltip formatter={(value) => formatCurrency(Number(value))} />
                   <Bar dataKey="Entradas" fill="#10B981" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="Despesas" fill="#EF4444" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="Cartões" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
@@ -171,13 +171,13 @@ export function StatsPage() {
                     outerRadius={90}
                     paddingAngle={3}
                     dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }: { name?: string; percent?: number }) => `${name ?? ''} ${((percent ?? 0) * 100).toFixed(0)}%`}
                   >
                     {categoryData.map((entry, idx) => (
                       <Cell key={idx} fill={entry.fill} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                  <Tooltip formatter={(value) => formatCurrency(Number(value))} />
                 </RechartsPie>
               </ResponsiveContainer>
             ) : (

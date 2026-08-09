@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, ArrowLeftRight, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';

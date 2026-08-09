@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileSpreadsheet, FileText, Download, TrendingUp, TrendingDown, CreditCard, Calendar } from 'lucide-react';
+import { ArrowLeft, Download, TrendingUp, TrendingDown, CreditCard, Calendar } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useData } from '../hooks/useData';
 import { incomeService, expenseService, cardTransactionService, fixedExpenseService } from '../services/api';

@@ -31,12 +31,6 @@ const visibilityIcons: Record<CoupleVisibility, React.ReactNode> = {
   children: <Baby size={12} />,
 };
 
-const visibilityLabels: Record<CoupleVisibility, string> = {
-  shared: 'Casa',
-  individual: 'Gabriel',
-  household: 'Rayane',
-  children: 'Filhos',
-};
 
 export function TransactionList({ items, type, onMarkPaid, onDelete, emptyMessage }: TransactionListProps) {
   if (items.length === 0) {
