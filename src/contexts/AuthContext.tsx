@@ -14,6 +14,20 @@ const DEMO_PROFILE: Profile = {
 
 const DEMO_COUPLE_ID = 'demo-couple-001';
 
+export const VISIBILITY_OPTIONS = [
+  { value: 'shared', label: 'Casa (todos)' },
+  { value: 'individual', label: 'Gabriel' },
+  { value: 'household', label: 'Rayane' },
+  { value: 'children', label: 'Filhos' },
+];
+
+export const VISIBILITY_LABELS: Record<string, string> = {
+  shared: 'Casa',
+  individual: 'Gabriel',
+  household: 'Rayane',
+  children: 'Filhos',
+};
+
 interface AuthState {
   user: User | null;
   session: Session | null;

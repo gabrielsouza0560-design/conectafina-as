@@ -81,7 +81,7 @@ create table financas.income (
   status text not null default 'pending' check (status in ('paid', 'pending', 'overdue', 'scheduled', 'cancelled')),
   paid_at timestamptz,
   payment_method text,
-  visibility text not null default 'shared' check (visibility in ('individual', 'shared', 'household')),
+  visibility text not null default 'shared' check (visibility in ('individual', 'shared', 'household', 'children')),
   notes text,
   created_at timestamptz not null default now()
 );
@@ -100,7 +100,7 @@ create table financas.expenses (
   paid_at timestamptz,
   payment_method text,
   payment_account_id uuid references financas.accounts(id) on delete set null,
-  visibility text not null default 'shared' check (visibility in ('individual', 'shared', 'household')),
+  visibility text not null default 'shared' check (visibility in ('individual', 'shared', 'household', 'children')),
   notes text,
   attachment_url text,
   created_at timestamptz not null default now()
@@ -144,7 +144,7 @@ create table financas.card_transactions (
   amount numeric(14, 2) not null check (amount > 0),
   date date not null default current_date,
   total_installments integer not null default 1 check (total_installments >= 1),
-  visibility text not null default 'shared' check (visibility in ('individual', 'shared', 'household')),
+  visibility text not null default 'shared' check (visibility in ('individual', 'shared', 'household', 'children')),
   notes text,
   created_at timestamptz not null default now()
 );
@@ -189,7 +189,7 @@ create table financas.fixed_expenses (
   due_day integer not null check (due_day between 1 and 31),
   recurrence text not null default 'monthly' check (recurrence in ('monthly', 'bimonthly', 'quarterly', 'semiannual', 'annual')),
   account_id uuid references financas.accounts(id) on delete set null,
-  visibility text not null default 'shared' check (visibility in ('individual', 'shared', 'household')),
+  visibility text not null default 'shared' check (visibility in ('individual', 'shared', 'household', 'children')),
   active boolean not null default true,
   notes text,
   created_at timestamptz not null default now()

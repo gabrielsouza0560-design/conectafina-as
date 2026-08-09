@@ -2,7 +2,7 @@ export type TransactionStatus = 'paid' | 'pending' | 'overdue' | 'scheduled' | '
 
 export type TransactionType = 'income' | 'expense' | 'card_purchase' | 'bill' | 'daily_income' | 'transfer';
 
-export type CoupleVisibility = 'individual' | 'shared' | 'household';
+export type CoupleVisibility = 'individual' | 'shared' | 'household' | 'children';
 
 export interface Profile {
   id: string;

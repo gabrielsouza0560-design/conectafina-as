@@ -10,9 +10,10 @@ import { formatCurrency } from '../utils/format';
 import type { CreditCard, Category } from '../types';
 
 const visibilityOptions = [
-  { value: 'shared', label: 'Compartilhado' },
-  { value: 'individual', label: 'Individual' },
-  { value: 'household', label: 'Casa' },
+  { value: 'shared', label: 'Casa (todos)' },
+  { value: 'individual', label: 'Gabriel' },
+  { value: 'household', label: 'Rayane' },
+  { value: 'children', label: 'Filhos' },
 ];
 
 export function NewCardPurchasePage() {

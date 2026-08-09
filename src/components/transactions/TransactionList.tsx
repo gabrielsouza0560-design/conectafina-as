@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import type { TransactionStatus, CoupleVisibility } from '../../types';
 import { StatusBadge } from '../ui/StatusBadge';
 import { formatCurrency, formatDate } from '../../utils/format';
-import { Check, Trash2, Eye, Users, Home } from 'lucide-react';
+import { Check, Trash2, Eye, Users, Home, Baby } from 'lucide-react';
 
 interface TransactionItem {
   id: string;
@@ -28,6 +28,14 @@ const visibilityIcons: Record<CoupleVisibility, React.ReactNode> = {
   individual: <Eye size={12} />,
   shared: <Users size={12} />,
   household: <Home size={12} />,
+  children: <Baby size={12} />,
+};
+
+const visibilityLabels: Record<CoupleVisibility, string> = {
+  shared: 'Casa',
+  individual: 'Gabriel',
+  household: 'Rayane',
+  children: 'Filhos',
 };
 
 export function TransactionList({ items, type, onMarkPaid, onDelete, emptyMessage }: TransactionListProps) {
