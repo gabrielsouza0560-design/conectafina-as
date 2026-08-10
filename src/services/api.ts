@@ -9,13 +9,87 @@ type TableName = 'income' | 'expenses' | 'fixed_expenses' | 'accounts' | 'catego
   | 'cards' | 'card_transactions' | 'installments' | 'transfers'
   | 'daily_income' | 'financial_goals' | 'notifications';
 
-async function query<T>(table: TableName, coupleId: string, options?: {
+// --- localStorage helpers for demo mode ---
+
+function localKey(table: TableName) {
+  return `conecta_demo_${table}`;
+}
+
+function localGet<T>(table: TableName): T[] {
+  try {
+    const raw = localStorage.getItem(localKey(table));
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function localSet<T>(table: TableName, data: T[]) {
+  localStorage.setItem(localKey(table), JSON.stringify(data));
+}
+
+function localQuery<T extends Record<string, unknown>>(table: TableName, coupleId: string, options?: {
+  orderBy?: string;
+  ascending?: boolean;
+  filters?: Record<string, unknown>;
+  limit?: number;
+}): T[] {
+  let items = localGet<T>(table).filter(i => i.couple_id === coupleId || !i.couple_id);
+
+  if (options?.filters) {
+    for (const [key, value] of Object.entries(options.filters)) {
+      if (value !== undefined && value !== null && value !== '') {
+        items = items.filter(i => i[key] === value);
+      }
+    }
+  }
+
+  const orderBy = options?.orderBy || 'created_at';
+  const asc = options?.ascending ?? false;
+  items.sort((a, b) => {
+    const va = String(a[orderBy] ?? '');
+    const vb = String(b[orderBy] ?? '');
+    return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
+
+  if (options?.limit) items = items.slice(0, options.limit);
+  return items;
+}
+
+function localInsert<T extends Record<string, unknown>>(table: TableName, record: Partial<T>): T {
+  const items = localGet<T>(table);
+  const newItem = {
+    ...record,
+    id: crypto.randomUUID(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  } as T;
+  items.push(newItem);
+  localSet(table, items);
+  return newItem;
+}
+
+function localUpdate<T extends Record<string, unknown>>(table: TableName, id: string, updates: Partial<T>): T {
+  const items = localGet<T>(table);
+  const idx = items.findIndex(i => i.id === id);
+  if (idx === -1) throw new Error('Item não encontrado');
+  items[idx] = { ...items[idx], ...updates, updated_at: new Date().toISOString() };
+  localSet(table, items);
+  return items[idx];
+}
+
+function localRemove(table: TableName, id: string): void {
+  const items = localGet<Record<string, unknown>>(table);
+  localSet(table, items.filter(i => i.id !== id));
+}
+
+// --- Supabase + fallback ---
+
+async function query<T extends Record<string, unknown>>(table: TableName, coupleId: string, options?: {
   orderBy?: string;
   ascending?: boolean;
   filters?: Record<string, unknown>;
   limit?: number;
 }): Promise<T[]> {
-  if (!supabase) return [];
+  if (!supabase) return localQuery<T>(table, coupleId, options);
   let q = supabase.from(table).select('*').eq('couple_id', coupleId);
 
   if (options?.filters) {
@@ -35,22 +109,22 @@ async function query<T>(table: TableName, coupleId: string, options?: {
   return (data || []) as T[];
 }
 
-async function insert<T>(table: TableName, record: Partial<T>): Promise<T> {
-  if (!supabase) throw new Error('Supabase não configurado');
+async function insert<T extends Record<string, unknown>>(table: TableName, record: Partial<T>): Promise<T> {
+  if (!supabase) return localInsert<T>(table, record);
   const { data, error } = await supabase.from(table).insert(record as any).select().single();
   if (error) throw error;
   return data as T;
 }
 
-async function update<T>(table: TableName, id: string, updates: Partial<T>): Promise<T> {
-  if (!supabase) throw new Error('Supabase não configurado');
+async function update<T extends Record<string, unknown>>(table: TableName, id: string, updates: Partial<T>): Promise<T> {
+  if (!supabase) return localUpdate<T>(table, id, updates);
   const { data, error } = await supabase.from(table).update(updates as any).eq('id', id).select().single();
   if (error) throw error;
   return data as T;
 }
 
 async function remove(table: TableName, id: string): Promise<void> {
-  if (!supabase) throw new Error('Supabase não configurado');
+  if (!supabase) { localRemove(table, id); return; }
   const { error } = await supabase.from(table).delete().eq('id', id);
   if (error) throw error;
 }
@@ -170,7 +244,9 @@ export const cardTransactionService = {
 
 export const installmentService = {
   listByCard: async (cardId: string): Promise<Installment[]> => {
-    if (!supabase) return [];
+    if (!supabase) {
+      return localGet<Installment>('installments').filter(i => i.card_id === cardId);
+    }
     const { data, error } = await supabase
       .from('installments')
       .select('*')
