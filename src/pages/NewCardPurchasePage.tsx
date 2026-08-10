@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
@@ -18,6 +18,8 @@ const visibilityOptions = [
 
 export function NewCardPurchasePage() {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEditing = !!id;
   const { profile, coupleId } = useAuth();
   const { data: cards } = useData<CreditCard>(
     (coupleId) => cardService.list(coupleId)
@@ -41,6 +43,25 @@ export function NewCardPurchasePage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  useEffect(() => {
+    if (!id || !coupleId) return;
+    cardTransactionService.list(coupleId).then(items => {
+      const item = items.find(i => i.id === id);
+      if (item) {
+        setForm({
+          card_id: item.card_id || '',
+          description: item.description || '',
+          amount: String(item.amount),
+          date: item.date || new Date().toISOString().slice(0, 10),
+          total_installments: String(item.total_installments || 1),
+          category_id: item.category_id || '',
+          visibility: item.visibility || 'shared',
+          notes: item.notes || '',
+        });
+      }
+    });
+  }, [id, coupleId]);
+
   function set(key: string, value: string) {
     setForm(f => ({ ...f, [key]: value }));
   }
@@ -53,7 +74,7 @@ export function NewCardPurchasePage() {
     if (!profile || !coupleId || !form.card_id || !form.description || !form.amount) return;
     setSaving(true);
     try {
-      await cardTransactionService.create({
+      const payload = {
         couple_id: coupleId,
         card_id: form.card_id,
         profile_id: profile.id,
@@ -64,7 +85,12 @@ export function NewCardPurchasePage() {
         category_id: form.category_id || null,
         visibility: form.visibility as any,
         notes: form.notes || null,
-      });
+      };
+      if (isEditing) {
+        await cardTransactionService.update(id, payload);
+      } else {
+        await cardTransactionService.create(payload);
+      }
       setSaved(true);
       setTimeout(() => navigate('/cards'), 800);
     } catch (err) {
@@ -80,7 +106,7 @@ export function NewCardPurchasePage() {
           <div className="w-20 h-20 rounded-full bg-green-500 flex items-center justify-center mx-auto mb-4">
             <Check size={40} className="text-white" />
           </div>
-          <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">Compra registrada!</p>
+          <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{isEditing ? 'Compra atualizada!' : 'Compra registrada!'}</p>
         </motion.div>
       </div>
     );
@@ -92,7 +118,7 @@ export function NewCardPurchasePage() {
         <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800">
           <ArrowLeft size={20} className="text-gray-600 dark:text-gray-400" />
         </button>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Compra no Cartão</h1>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{isEditing ? 'Editar Compra' : 'Compra no Cartão'}</h1>
       </div>
 
       <Card>
@@ -136,7 +162,7 @@ export function NewCardPurchasePage() {
           <Input label="Observação" placeholder="Opcional" value={form.notes} onChange={e => set('notes', e.target.value)} />
 
           <Button onClick={handleSave} loading={saving} disabled={!form.card_id || !form.description || !form.amount} className="w-full" size="lg">
-            Registrar Compra
+            {isEditing ? 'Salvar Alterações' : 'Registrar Compra'}
           </Button>
         </div>
       </Card>

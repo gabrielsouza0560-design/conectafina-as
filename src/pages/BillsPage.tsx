@@ -41,6 +41,7 @@ export function BillsPage() {
   );
 
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (location.pathname === '/new/bill') setShowForm(true);
@@ -63,7 +64,7 @@ export function BillsPage() {
     if (!profile || !coupleId) return;
     setSaving(true);
     try {
-      await fixedExpenseService.create({
+      const payload = {
         couple_id: coupleId,
         profile_id: profile.id,
         description: form.description,
@@ -72,8 +73,14 @@ export function BillsPage() {
         recurrence: form.recurrence as FixedExpense['recurrence'],
         visibility: form.visibility as FixedExpense['visibility'],
         notes: form.notes || null,
-      });
+      };
+      if (editingId) {
+        await fixedExpenseService.update(editingId, payload);
+      } else {
+        await fixedExpenseService.create(payload);
+      }
       setShowForm(false);
+      setEditingId(null);
       setForm({ description: '', amount: '', due_day: '10', recurrence: 'monthly', visibility: 'shared', notes: '' });
       refresh();
     } catch (err) {
@@ -162,6 +169,23 @@ export function BillsPage() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <button
+                      onClick={() => {
+                        setEditingId(bill.id);
+                        setForm({
+                          description: bill.description,
+                          amount: String(bill.amount),
+                          due_day: String(bill.due_day),
+                          recurrence: bill.recurrence,
+                          visibility: bill.visibility || 'shared',
+                          notes: bill.notes || '',
+                        });
+                        setShowForm(true);
+                      }}
+                      className="text-xs text-blue-600 hover:underline"
+                    >
+                      Editar
+                    </button>
+                    <button
                       onClick={() => handleToggleActive(bill)}
                       className="text-xs text-blue-600 hover:underline"
                     >
@@ -181,7 +205,7 @@ export function BillsPage() {
         </div>
       )}
 
-      <Modal open={showForm} onClose={() => setShowForm(false)} title="Nova Conta Fixa">
+      <Modal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); }} title={editingId ? 'Editar Conta Fixa' : 'Nova Conta Fixa'}>
         <div className="space-y-4">
           <Input
             label="Descrição"
@@ -226,9 +250,9 @@ export function BillsPage() {
             onChange={e => setForm({ ...form, notes: e.target.value })}
           />
           <div className="flex gap-2 pt-2">
-            <Button variant="outline" onClick={() => setShowForm(false)} className="flex-1">Cancelar</Button>
+            <Button variant="outline" onClick={() => { setShowForm(false); setEditingId(null); }} className="flex-1">Cancelar</Button>
             <Button onClick={handleSave} loading={saving} disabled={!form.description || !form.amount} className="flex-1">
-              Salvar
+              {editingId ? 'Salvar Alterações' : 'Salvar'}
             </Button>
           </div>
         </div>

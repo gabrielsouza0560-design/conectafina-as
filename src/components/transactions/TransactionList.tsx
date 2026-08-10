@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import type { TransactionStatus, CoupleVisibility } from '../../types';
 import { StatusBadge } from '../ui/StatusBadge';
 import { formatCurrency, formatDate } from '../../utils/format';
-import { Check, Trash2, Eye, Users, Home, Baby } from 'lucide-react';
+import { Check, Trash2, Pencil, Eye, Users, Home, Baby } from 'lucide-react';
 
 interface TransactionItem {
   id: string;
@@ -32,7 +32,7 @@ const visibilityIcons: Record<CoupleVisibility, React.ReactNode> = {
 };
 
 
-export function TransactionList({ items, type, onMarkPaid, onDelete, emptyMessage }: TransactionListProps) {
+export function TransactionList({ items, type, onMarkPaid, onDelete, onEdit, emptyMessage }: TransactionListProps) {
   if (items.length === 0) {
     return (
       <div className="text-center py-12">
@@ -86,28 +86,35 @@ export function TransactionList({ items, type, onMarkPaid, onDelete, emptyMessag
             <StatusBadge status={item.status} />
           </div>
 
-          {(item.status === 'pending' || item.status === 'overdue') && (
-            <div className="flex flex-col gap-1">
-              {onMarkPaid && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onMarkPaid(item.id); }}
-                  className="p-1.5 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors"
-                  title="Dar baixa"
-                >
-                  <Check size={14} />
-                </button>
-              )}
-              {onDelete && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
-                  className="p-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
-                  title="Excluir"
-                >
-                  <Trash2 size={14} />
-                </button>
-              )}
-            </div>
-          )}
+          <div className="flex flex-col gap-1">
+            {onEdit && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onEdit(item.id); }}
+                className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                title="Editar"
+              >
+                <Pencil size={14} />
+              </button>
+            )}
+            {(item.status === 'pending' || item.status === 'overdue') && onMarkPaid && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onMarkPaid(item.id); }}
+                className="p-1.5 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors"
+                title="Dar baixa"
+              >
+                <Check size={14} />
+              </button>
+            )}
+            {(item.status === 'pending' || item.status === 'overdue') && onDelete && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
+                className="p-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                title="Excluir"
+              >
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
         </motion.div>
       ))}
     </div>

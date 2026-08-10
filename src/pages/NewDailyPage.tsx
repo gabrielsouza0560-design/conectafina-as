@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
@@ -11,6 +11,8 @@ import type { BankAccount } from '../types';
 
 export function NewDailyPage() {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEditing = !!id;
   const { profile, coupleId } = useAuth();
   const { data: accounts } = useData<BankAccount>(
     (coupleId) => accountService.list(coupleId)
@@ -26,6 +28,22 @@ export function NewDailyPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  useEffect(() => {
+    if (!id || !coupleId) return;
+    dailyIncomeService.list(coupleId).then(items => {
+      const item = items.find(i => i.id === id);
+      if (item) {
+        setForm({
+          date: item.date || new Date().toISOString().slice(0, 10),
+          quantity: String(item.quantity || 1),
+          rate: String(item.rate || ''),
+          description: item.description || '',
+          account_id: item.account_id || '',
+        });
+      }
+    });
+  }, [id, coupleId]);
+
   function set(key: string, value: string) {
     setForm(f => ({ ...f, [key]: value }));
   }
@@ -38,15 +56,21 @@ export function NewDailyPage() {
     if (!profile || !coupleId || !form.rate) return;
     setSaving(true);
     try {
-      await dailyIncomeService.create({
+      const payload = {
         couple_id: coupleId,
         profile_id: profile.id,
         date: form.date,
         quantity,
         rate,
+        total: quantity * rate,
         description: form.description || null,
         account_id: form.account_id || null,
-      });
+      };
+      if (isEditing) {
+        await dailyIncomeService.update(id, payload);
+      } else {
+        await dailyIncomeService.create(payload);
+      }
       setSaved(true);
       setTimeout(() => navigate('/daily'), 800);
     } catch (err) {
@@ -62,7 +86,7 @@ export function NewDailyPage() {
           <div className="w-20 h-20 rounded-full bg-green-500 flex items-center justify-center mx-auto mb-4">
             <Check size={40} className="text-white" />
           </div>
-          <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">Diária salva!</p>
+          <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{isEditing ? 'Diária atualizada!' : 'Diária salva!'}</p>
         </motion.div>
       </div>
     );
@@ -74,7 +98,7 @@ export function NewDailyPage() {
         <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800">
           <ArrowLeft size={20} className="text-gray-600 dark:text-gray-400" />
         </button>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Nova Diária</h1>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{isEditing ? 'Editar Diária' : 'Nova Diária'}</h1>
       </div>
 
       <Card>
@@ -104,7 +128,7 @@ export function NewDailyPage() {
           )}
 
           <Button onClick={handleSave} loading={saving} disabled={!form.rate} className="w-full" size="lg">
-            Salvar Diária
+            {isEditing ? 'Salvar Alterações' : 'Salvar Diária'}
           </Button>
         </div>
       </Card>

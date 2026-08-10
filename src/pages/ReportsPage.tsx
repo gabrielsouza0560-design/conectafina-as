@@ -1,12 +1,15 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, TrendingUp, TrendingDown, CreditCard, Calendar } from 'lucide-react';
+import { ArrowLeft, Download, FileSpreadsheet, FileText, TrendingUp, TrendingDown, CreditCard, Calendar } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useData } from '../hooks/useData';
 import { incomeService, expenseService, cardTransactionService, fixedExpenseService } from '../services/api';
 import { Button, Card, CardSkeleton, Select } from '../components/ui';
 import { formatCurrency, getMonthName } from '../utils/format';
 import type { Income, Expense, CardTransaction, FixedExpense } from '../types';
+import * as XLSX from 'xlsx';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export function ReportsPage() {
   const navigate = useNavigate();
@@ -67,22 +70,28 @@ export function ReportsPage() {
     { value: String(now.getFullYear() + 1), label: String(now.getFullYear() + 1) },
   ];
 
-  function exportCSV() {
+  function getExportRows() {
     const monthIncomes = incomes.filter(i => i.date.startsWith(monthStr));
     const monthExpenses = expenses.filter(e => e.date.startsWith(monthStr));
     const monthCards = cardTx.filter(c => c.date.startsWith(monthStr));
+    const activeBills = bills.filter(b => b.active);
 
+    const statusLabel: Record<string, string> = {
+      paid: 'Pago', pending: 'Pendente', overdue: 'Vencido', scheduled: 'Agendado',
+    };
+
+    const rows: string[][] = [];
+    monthIncomes.forEach(i => rows.push(['Entrada', i.description, Number(i.amount).toFixed(2), i.date, statusLabel[i.status] || i.status]));
+    monthExpenses.forEach(e => rows.push(['Despesa', e.description, Number(e.amount).toFixed(2), e.date, statusLabel[e.status] || e.status]));
+    monthCards.forEach(c => rows.push(['Cartão', c.description, Number(c.amount).toFixed(2), c.date, 'Pago']));
+    activeBills.forEach(b => rows.push(['Conta Fixa', b.description, Number(b.amount).toFixed(2), `Dia ${b.due_day}`, 'Mensal']));
+    return rows;
+  }
+
+  function exportCSV() {
+    const rows = getExportRows();
     let csv = 'Tipo,Descrição,Valor,Data,Status\n';
-
-    monthIncomes.forEach(i => {
-      csv += `Entrada,"${i.description}",${Number(i.amount).toFixed(2)},${i.date},${i.status}\n`;
-    });
-    monthExpenses.forEach(e => {
-      csv += `Despesa,"${e.description}",${Number(e.amount).toFixed(2)},${e.date},${e.status}\n`;
-    });
-    monthCards.forEach(c => {
-      csv += `Cartão,"${c.description}",${Number(c.amount).toFixed(2)},${c.date},\n`;
-    });
+    rows.forEach(r => { csv += `${r[0]},"${r[1]}",${r[2]},${r[3]},${r[4]}\n`; });
 
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -90,6 +99,53 @@ export function ReportsPage() {
     link.download = `relatorio-${monthStr}.csv`;
     link.click();
     URL.revokeObjectURL(link.href);
+  }
+
+  function exportExcel() {
+    const rows = getExportRows();
+    const header = ['Tipo', 'Descrição', 'Valor (R$)', 'Data', 'Status'];
+    const data = rows.map(r => [r[0], r[1], parseFloat(r[2]), r[3], r[4]]);
+
+    const ws = XLSX.utils.aoa_to_sheet([header, ...data]);
+    ws['!cols'] = [{ wch: 12 }, { wch: 30 }, { wch: 14 }, { wch: 12 }, { wch: 12 }];
+
+    const summaryStart = data.length + 3;
+    XLSX.utils.sheet_add_aoa(ws, [
+      ['Resumo do Mês'],
+      ['Total Entradas', report.totalIncome],
+      ['Total Despesas', report.totalExpense],
+      ['Total Cartões', report.totalCards],
+      ['Contas Fixas', report.totalBills],
+      ['Saldo', report.balance],
+    ], { origin: `A${summaryStart}` });
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, `${getMonthName(selectedMonth)} ${selectedYear}`);
+    XLSX.writeFile(wb, `relatorio-${monthStr}.xlsx`);
+  }
+
+  function exportPDF() {
+    const rows = getExportRows();
+    const doc = new jsPDF();
+    const title = `Relatório Financeiro — ${getMonthName(selectedMonth)} ${selectedYear}`;
+
+    doc.setFontSize(16);
+    doc.text(title, 14, 20);
+
+    doc.setFontSize(10);
+    doc.text(`Saldo: R$ ${report.balance.toFixed(2)}`, 14, 28);
+    doc.text(`Entradas: R$ ${report.totalIncome.toFixed(2)}  |  Despesas: R$ ${report.totalExpense.toFixed(2)}  |  Cartões: R$ ${report.totalCards.toFixed(2)}`, 14, 34);
+
+    autoTable(doc, {
+      startY: 42,
+      head: [['Tipo', 'Descrição', 'Valor (R$)', 'Data', 'Status']],
+      body: rows,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [10, 110, 250] },
+      columnStyles: { 2: { halign: 'right' } },
+    });
+
+    doc.save(`relatorio-${monthStr}.pdf`);
   }
 
   if (loading) {
@@ -109,9 +165,17 @@ export function ReportsPage() {
           </button>
           <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Relatórios</h1>
         </div>
-        <Button size="sm" variant="secondary" onClick={exportCSV}>
-          <Download size={14} /> CSV
-        </Button>
+        <div className="flex gap-1.5">
+          <Button size="sm" variant="secondary" onClick={exportExcel}>
+            <FileSpreadsheet size={14} /> Excel
+          </Button>
+          <Button size="sm" variant="secondary" onClick={exportPDF}>
+            <FileText size={14} /> PDF
+          </Button>
+          <Button size="sm" variant="ghost" onClick={exportCSV}>
+            <Download size={14} /> CSV
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">

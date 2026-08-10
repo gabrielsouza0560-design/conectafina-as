@@ -249,6 +249,7 @@ export const cardTransactionService = {
   list: (coupleId: string, filters?: Record<string, unknown>) =>
     query<CardTransaction>('card_transactions', coupleId, { orderBy: 'date', filters }),
   create: (data: Partial<CardTransaction>) => insert<CardTransaction>('card_transactions', data),
+  update: (id: string, data: Partial<CardTransaction>) => update<CardTransaction>('card_transactions', id, data),
   delete: (id: string) => remove('card_transactions', id),
 };
 
@@ -276,6 +277,7 @@ export const transferService = {
   list: (coupleId: string) =>
     query<Transfer>('transfers', coupleId, { orderBy: 'date' }),
   create: (data: Partial<Transfer>) => insert<Transfer>('transfers', data),
+  update: (id: string, data: Partial<Transfer>) => update<Transfer>('transfers', id, data),
   delete: (id: string) => remove('transfers', id),
 };
 
@@ -283,6 +285,7 @@ export const dailyIncomeService = {
   list: (coupleId: string) =>
     query<DailyIncome>('daily_income', coupleId, { orderBy: 'date' }),
   create: (data: Partial<DailyIncome>) => insert<DailyIncome>('daily_income', data),
+  update: (id: string, data: Partial<DailyIncome>) => update<DailyIncome>('daily_income', id, data),
   delete: (id: string) => remove('daily_income', id),
 };
 

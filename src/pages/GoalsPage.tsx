@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Target, Trash2, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Plus, Target, Trash2, TrendingUp, Pencil } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../hooks/useData';
@@ -17,6 +17,7 @@ export function GoalsPage() {
   );
 
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [showDeposit, setShowDeposit] = useState<FinancialGoal | null>(null);
   const [depositAmount, setDepositAmount] = useState('');
   const [form, setForm] = useState({
@@ -32,7 +33,7 @@ export function GoalsPage() {
     if (!profile || !coupleId || !form.name || !form.target_amount) return;
     setSaving(true);
     try {
-      await goalService.create({
+      const payload = {
         couple_id: coupleId,
         profile_id: profile.id,
         name: form.name,
@@ -40,8 +41,14 @@ export function GoalsPage() {
         deadline: form.deadline || null,
         monthly_contribution: form.monthly_contribution ? parseFloat(form.monthly_contribution.replace(',', '.')) : null,
         description: form.description || null,
-      });
+      };
+      if (editingId) {
+        await goalService.update(editingId, payload);
+      } else {
+        await goalService.create(payload);
+      }
       setShowForm(false);
+      setEditingId(null);
       setForm({ name: '', target_amount: '', deadline: '', monthly_contribution: '', description: '' });
       refresh();
     } catch (err) { alert('Erro ao salvar: ' + (err instanceof Error ? err.message : String(err))); }
@@ -144,12 +151,28 @@ export function GoalsPage() {
                           )}
                         </div>
                       </div>
-                      <button
-                        onClick={() => handleDelete(goal.id)}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => {
+                            setEditingId(goal.id);
+                            setForm({
+                              name: goal.name, target_amount: String(goal.target_amount),
+                              deadline: goal.deadline || '', monthly_contribution: goal.monthly_contribution ? String(goal.monthly_contribution) : '',
+                              description: goal.description || '',
+                            });
+                            setShowForm(true);
+                          }}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(goal.id)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
 
                     <div>
@@ -197,7 +220,7 @@ export function GoalsPage() {
         </div>
       )}
 
-      <Modal open={showForm} onClose={() => setShowForm(false)} title="Nova Meta">
+      <Modal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); }} title={editingId ? 'Editar Meta' : 'Nova Meta'}>
         <div className="space-y-4">
           <Input label="Nome da meta" placeholder="Ex: Viagem, Carro, Emergência" value={form.name} onChange={e => set('name', e.target.value)} required />
           <Input label="Valor alvo (R$)" placeholder="0,00" value={form.target_amount} onChange={e => set('target_amount', e.target.value)} inputMode="decimal" required />
@@ -205,8 +228,8 @@ export function GoalsPage() {
           <Input label="Contribuição mensal (R$)" placeholder="0,00" value={form.monthly_contribution} onChange={e => set('monthly_contribution', e.target.value)} inputMode="decimal" />
           <Input label="Descrição" placeholder="Opcional" value={form.description} onChange={e => set('description', e.target.value)} />
           <div className="flex gap-2 pt-2">
-            <Button variant="outline" onClick={() => setShowForm(false)} className="flex-1">Cancelar</Button>
-            <Button onClick={handleSave} loading={saving} disabled={!form.name || !form.target_amount} className="flex-1">Salvar</Button>
+            <Button variant="outline" onClick={() => { setShowForm(false); setEditingId(null); }} className="flex-1">Cancelar</Button>
+            <Button onClick={handleSave} loading={saving} disabled={!form.name || !form.target_amount} className="flex-1">{editingId ? 'Salvar Alterações' : 'Salvar'}</Button>
           </div>
         </div>
       </Modal>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Clock, Trash2, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Plus, Clock, Trash2, CheckCircle, Pencil } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useData } from '../hooks/useData';
 import { dailyIncomeService } from '../services/api';
@@ -128,6 +128,12 @@ export function DailyIncomePage() {
                   <p className="text-sm font-semibold text-cyan-600 dark:text-cyan-400">
                     {formatCurrency(Number(d.total))}
                   </p>
+                  <button
+                    onClick={() => navigate('/edit/daily/' + d.id)}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                  >
+                    <Pencil size={14} />
+                  </button>
                   <button
                     onClick={() => handleDelete(d.id)}
                     className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"

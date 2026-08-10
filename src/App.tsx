@@ -59,6 +59,12 @@ export default function App() {
               <Route path="/new/bill" element={<BillsPage />} />
               <Route path="/new/daily" element={<NewDailyPage />} />
               <Route path="/new/transfer" element={<NewTransferPage />} />
+
+              <Route path="/edit/income/:id" element={<NewIncomePage />} />
+              <Route path="/edit/expense/:id" element={<NewExpensePage />} />
+              <Route path="/edit/daily/:id" element={<NewDailyPage />} />
+              <Route path="/edit/transfer/:id" element={<NewTransferPage />} />
+              <Route path="/edit/card-purchase/:id" element={<NewCardPurchasePage />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, CreditCard, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, Plus, CreditCard, ShoppingCart, Pencil } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../hooks/useData';
@@ -30,6 +30,7 @@ export function CardsPage() {
   );
 
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null);
   const [cardInstallments, setCardInstallments] = useState<Installment[]>([]);
   const [form, setForm] = useState({
@@ -42,11 +43,32 @@ export function CardsPage() {
     setForm(f => ({ ...f, [key]: value }));
   }
 
+  function handleEditCard(card: CardType) {
+    setEditingId(card.id);
+    setForm({
+      name: card.name || '',
+      bank: card.bank || '',
+      credit_limit: String(card.credit_limit || ''),
+      closing_day: String(card.closing_day || 5),
+      due_day: String(card.due_day || 15),
+      color: card.color || '#8B5CF6',
+      shared: card.shared || false,
+    });
+    setSelectedCard(null);
+    setShowForm(true);
+  }
+
+  function handleCloseForm() {
+    setShowForm(false);
+    setEditingId(null);
+    setForm({ name: '', bank: '', credit_limit: '', closing_day: '5', due_day: '15', color: '#8B5CF6', shared: false });
+  }
+
   async function handleSave() {
     if (!profile || !coupleId || !form.name || !form.bank) return;
     setSaving(true);
     try {
-      await cardService.create({
+      const payload = {
         couple_id: coupleId,
         profile_id: profile.id,
         name: form.name,
@@ -56,9 +78,13 @@ export function CardsPage() {
         due_day: parseInt(form.due_day) || 15,
         color: form.color,
         shared: form.shared,
-      });
-      setShowForm(false);
-      setForm({ name: '', bank: '', credit_limit: '', closing_day: '5', due_day: '15', color: '#8B5CF6', shared: false });
+      };
+      if (editingId) {
+        await cardService.update(editingId, payload);
+      } else {
+        await cardService.create(payload);
+      }
+      handleCloseForm();
       refresh();
     } catch (err) { alert('Erro ao salvar: ' + (err instanceof Error ? err.message : String(err))); }
     setSaving(false);
@@ -177,7 +203,7 @@ export function CardsPage() {
       )}
 
       {/* Modal novo cartão */}
-      <Modal open={showForm} onClose={() => setShowForm(false)} title="Novo Cartão">
+      <Modal open={showForm} onClose={handleCloseForm} title={editingId ? 'Editar Cartão' : 'Novo Cartão'}>
         <div className="space-y-4">
           <Input label="Nome do cartão" placeholder="Ex: Nubank" value={form.name} onChange={e => set('name', e.target.value)} required />
           <Input label="Banco" placeholder="Ex: Nu Pagamentos" value={form.bank} onChange={e => set('bank', e.target.value)} required />
@@ -192,8 +218,8 @@ export function CardsPage() {
             <span className="text-sm text-gray-700 dark:text-gray-300">Cartão compartilhado com parceiro(a)</span>
           </label>
           <div className="flex gap-2 pt-2">
-            <Button variant="outline" onClick={() => setShowForm(false)} className="flex-1">Cancelar</Button>
-            <Button onClick={handleSave} loading={saving} disabled={!form.name || !form.bank} className="flex-1">Salvar</Button>
+            <Button variant="outline" onClick={handleCloseForm} className="flex-1">Cancelar</Button>
+            <Button onClick={handleSave} loading={saving} disabled={!form.name || !form.bank} className="flex-1">{editingId ? 'Salvar Alterações' : 'Salvar'}</Button>
           </div>
         </div>
       </Modal>
@@ -254,6 +280,9 @@ export function CardsPage() {
             )}
 
             <div className="flex gap-2 pt-2">
+              <Button variant="secondary" size="sm" onClick={() => handleEditCard(selectedCard)}>
+                <Pencil size={14} /> Editar
+              </Button>
               <Button variant="danger" size="sm" onClick={() => { handleDelete(selectedCard.id); setSelectedCard(null); }}>
                 Excluir cartão
               </Button>

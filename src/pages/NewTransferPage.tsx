@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Check, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
@@ -10,6 +10,8 @@ import type { BankAccount } from '../types';
 
 export function NewTransferPage() {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEditing = !!id;
   const { profile, coupleId } = useAuth();
   const { data: accounts } = useData<BankAccount>(
     (coupleId) => accountService.list(coupleId)
@@ -25,6 +27,22 @@ export function NewTransferPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  useEffect(() => {
+    if (!id || !coupleId) return;
+    transferService.list(coupleId).then(items => {
+      const item = items.find(i => i.id === id);
+      if (item) {
+        setForm({
+          from_account_id: item.from_account_id || '',
+          to_account_id: item.to_account_id || '',
+          amount: String(item.amount),
+          date: item.date || new Date().toISOString().slice(0, 10),
+          notes: item.notes || '',
+        });
+      }
+    });
+  }, [id, coupleId]);
+
   function set(key: string, value: string) {
     setForm(f => ({ ...f, [key]: value }));
   }
@@ -37,7 +55,7 @@ export function NewTransferPage() {
     }
     setSaving(true);
     try {
-      await transferService.create({
+      const payload = {
         couple_id: coupleId,
         profile_id: profile.id,
         from_account_id: form.from_account_id,
@@ -45,7 +63,12 @@ export function NewTransferPage() {
         amount: parseFloat(form.amount.replace(',', '.')),
         date: form.date,
         notes: form.notes || null,
-      });
+      };
+      if (isEditing) {
+        await transferService.update(id, payload);
+      } else {
+        await transferService.create(payload);
+      }
       setSaved(true);
       setTimeout(() => navigate('/transfers'), 800);
     } catch (err) {
@@ -61,7 +84,7 @@ export function NewTransferPage() {
           <div className="w-20 h-20 rounded-full bg-green-500 flex items-center justify-center mx-auto mb-4">
             <Check size={40} className="text-white" />
           </div>
-          <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">Transferência realizada!</p>
+          <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{isEditing ? 'Transferência atualizada!' : 'Transferência realizada!'}</p>
         </motion.div>
       </div>
     );
@@ -75,7 +98,7 @@ export function NewTransferPage() {
         <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800">
           <ArrowLeft size={20} className="text-gray-600 dark:text-gray-400" />
         </button>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Transferência</h1>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{isEditing ? 'Editar Transferência' : 'Transferência'}</h1>
       </div>
 
       <Card>
@@ -101,7 +124,7 @@ export function NewTransferPage() {
             className="w-full"
             size="lg"
           >
-            Transferir
+            {isEditing ? 'Salvar Alterações' : 'Transferir'}
           </Button>
         </div>
       </Card>

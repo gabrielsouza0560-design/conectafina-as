@@ -134,6 +134,7 @@ export function ExpensesPage() {
         type="expense"
         onMarkPaid={(id) => setMarkPaidId(id)}
         onDelete={handleDelete}
+        onEdit={(id) => navigate('/edit/expense/' + id)}
         emptyMessage="Nenhuma despesa registrada. Toque em + para adicionar."
       />
 

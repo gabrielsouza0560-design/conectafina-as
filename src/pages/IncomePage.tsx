@@ -132,6 +132,7 @@ export function IncomePage() {
         type="income"
         onMarkPaid={(id) => setMarkPaidId(id)}
         onDelete={handleDelete}
+        onEdit={(id) => navigate('/edit/income/' + id)}
         emptyMessage="Nenhuma entrada registrada. Toque em + para adicionar."
       />
 

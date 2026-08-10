@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
@@ -17,6 +17,8 @@ const visibilityOptions = [
 
 export function NewExpensePage() {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEditing = !!id;
   const { profile, coupleId } = useAuth();
   const { data: accounts } = useData<BankAccount>(
     (coupleId) => accountService.list(coupleId)
@@ -41,6 +43,26 @@ export function NewExpensePage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  useEffect(() => {
+    if (!id || !coupleId) return;
+    expenseService.list(coupleId).then(items => {
+      const item = items.find(i => i.id === id);
+      if (item) {
+        setForm({
+          description: item.description || '',
+          amount: String(item.amount),
+          date: item.date || new Date().toISOString().slice(0, 10),
+          category_id: item.category_id || '',
+          account_id: item.account_id || '',
+          payment_method: item.payment_method || 'pix',
+          visibility: item.visibility || 'shared',
+          notes: item.notes || '',
+          status: item.status || 'pending',
+        });
+      }
+    });
+  }, [id, coupleId]);
+
   function set(key: string, value: string) {
     setForm(f => ({ ...f, [key]: value }));
   }
@@ -49,7 +71,7 @@ export function NewExpensePage() {
     if (!profile || !coupleId || !form.description || !form.amount) return;
     setSaving(true);
     try {
-      await expenseService.create({
+      const payload = {
         couple_id: coupleId,
         profile_id: profile.id,
         description: form.description,
@@ -61,7 +83,12 @@ export function NewExpensePage() {
         visibility: form.visibility as any,
         notes: form.notes || null,
         status: form.status as any,
-      });
+      };
+      if (isEditing) {
+        await expenseService.update(id, payload);
+      } else {
+        await expenseService.create(payload);
+      }
       setSaved(true);
       setTimeout(() => navigate('/expenses'), 800);
     } catch (err) {
@@ -77,7 +104,7 @@ export function NewExpensePage() {
           <div className="w-20 h-20 rounded-full bg-green-500 flex items-center justify-center mx-auto mb-4">
             <Check size={40} className="text-white" />
           </div>
-          <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">Despesa salva!</p>
+          <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{isEditing ? 'Despesa atualizada!' : 'Despesa salva!'}</p>
         </motion.div>
       </div>
     );
@@ -89,7 +116,7 @@ export function NewExpensePage() {
         <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800">
           <ArrowLeft size={20} className="text-gray-600 dark:text-gray-400" />
         </button>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Nova Despesa</h1>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{isEditing ? 'Editar Despesa' : 'Nova Despesa'}</h1>
       </div>
 
       <Card>
@@ -146,7 +173,7 @@ export function NewExpensePage() {
           <Input label="Observação" placeholder="Opcional" value={form.notes} onChange={e => set('notes', e.target.value)} />
 
           <Button onClick={handleSave} loading={saving} disabled={!form.description || !form.amount} className="w-full" size="lg">
-            Salvar Despesa
+            {isEditing ? 'Salvar Alterações' : 'Salvar Despesa'}
           </Button>
         </div>
       </Card>

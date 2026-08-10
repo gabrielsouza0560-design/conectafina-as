@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, ArrowLeftRight, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, ArrowLeftRight, Trash2, Pencil } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useData } from '../hooks/useData';
 import { transferService, accountService } from '../services/api';
@@ -78,6 +78,12 @@ export function TransfersPage() {
                   <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">
                     {formatCurrency(Number(t.amount))}
                   </p>
+                  <button
+                    onClick={() => navigate('/edit/transfer/' + t.id)}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                  >
+                    <Pencil size={14} />
+                  </button>
                   <button
                     onClick={() => handleDelete(t.id)}
                     className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"

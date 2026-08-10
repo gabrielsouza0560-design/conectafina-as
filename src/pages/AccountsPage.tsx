@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Wallet, ArrowLeftRight, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, Wallet, ArrowLeftRight, Trash2, Pencil } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../hooks/useData';
@@ -41,6 +41,7 @@ export function AccountsPage() {
   );
 
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: '', type: 'checking', balance: '0', color: '#3B82F6',
   });
@@ -56,14 +57,20 @@ export function AccountsPage() {
     if (!coupleId || !form.name) return;
     setSaving(true);
     try {
-      await accountService.create({
+      const payload = {
         couple_id: coupleId,
         name: form.name,
         type: form.type as BankAccount['type'],
         balance: parseFloat(form.balance.replace(',', '.')) || 0,
         color: form.color,
-      });
+      };
+      if (editingId) {
+        await accountService.update(editingId, payload);
+      } else {
+        await accountService.create(payload);
+      }
       setShowForm(false);
+      setEditingId(null);
       setForm({ name: '', type: 'checking', balance: '0', color: '#3B82F6' });
       refresh();
     } catch (err) { alert('Erro ao salvar: ' + (err instanceof Error ? err.message : String(err))); }
@@ -145,6 +152,16 @@ export function AccountsPage() {
                     </p>
                   </div>
                   <button
+                    onClick={() => {
+                      setEditingId(acc.id);
+                      setForm({ name: acc.name, type: acc.type, balance: String(acc.balance), color: acc.color || '#3B82F6' });
+                      setShowForm(true);
+                    }}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
                     onClick={() => handleDelete(acc.id)}
                     className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                   >
@@ -157,15 +174,15 @@ export function AccountsPage() {
         </div>
       )}
 
-      <Modal open={showForm} onClose={() => setShowForm(false)} title="Nova Conta Bancária">
+      <Modal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); }} title={editingId ? 'Editar Conta' : 'Nova Conta Bancária'}>
         <div className="space-y-4">
           <Input label="Nome da conta" placeholder="Ex: Nubank, Inter, Dinheiro" value={form.name} onChange={e => set('name', e.target.value)} required />
           <Select label="Tipo" options={accountTypes} value={form.type} onChange={e => set('type', e.target.value)} />
           <Input label="Saldo inicial (R$)" placeholder="0,00" value={form.balance} onChange={e => set('balance', e.target.value)} inputMode="decimal" />
           <Select label="Cor" options={accountColors} value={form.color} onChange={e => set('color', e.target.value)} />
           <div className="flex gap-2 pt-2">
-            <Button variant="outline" onClick={() => setShowForm(false)} className="flex-1">Cancelar</Button>
-            <Button onClick={handleSave} loading={saving} disabled={!form.name} className="flex-1">Salvar</Button>
+            <Button variant="outline" onClick={() => { setShowForm(false); setEditingId(null); }} className="flex-1">Cancelar</Button>
+            <Button onClick={handleSave} loading={saving} disabled={!form.name} className="flex-1">{editingId ? 'Salvar Alterações' : 'Salvar'}</Button>
           </div>
         </div>
       </Modal>
