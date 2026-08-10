@@ -26,18 +26,18 @@ function localSet<T>(table: TableName, data: T[]) {
   localStorage.setItem(localKey(table), JSON.stringify(data));
 }
 
-function localQuery<T extends Record<string, unknown>>(table: TableName, coupleId: string, options?: {
+function localQuery<T>(table: TableName, coupleId: string, options?: {
   orderBy?: string;
   ascending?: boolean;
   filters?: Record<string, unknown>;
   limit?: number;
 }): T[] {
-  let items = localGet<T>(table).filter(i => i.couple_id === coupleId || !i.couple_id);
+  let items = localGet<T>(table).filter(i => (i as any).couple_id === coupleId || !(i as any).couple_id);
 
   if (options?.filters) {
     for (const [key, value] of Object.entries(options.filters)) {
       if (value !== undefined && value !== null && value !== '') {
-        items = items.filter(i => i[key] === value);
+        items = items.filter(i => (i as any)[key] === value);
       }
     }
   }
@@ -45,8 +45,8 @@ function localQuery<T extends Record<string, unknown>>(table: TableName, coupleI
   const orderBy = options?.orderBy || 'created_at';
   const asc = options?.ascending ?? false;
   items.sort((a, b) => {
-    const va = String(a[orderBy] ?? '');
-    const vb = String(b[orderBy] ?? '');
+    const va = String((a as any)[orderBy] ?? '');
+    const vb = String((b as any)[orderBy] ?? '');
     return asc ? va.localeCompare(vb) : vb.localeCompare(va);
   });
 
@@ -54,7 +54,7 @@ function localQuery<T extends Record<string, unknown>>(table: TableName, coupleI
   return items;
 }
 
-function localInsert<T extends Record<string, unknown>>(table: TableName, record: Partial<T>): T {
+function localInsert<T>(table: TableName, record: Partial<T>): T {
   const items = localGet<T>(table);
   const newItem = {
     ...record,
@@ -67,23 +67,23 @@ function localInsert<T extends Record<string, unknown>>(table: TableName, record
   return newItem;
 }
 
-function localUpdate<T extends Record<string, unknown>>(table: TableName, id: string, updates: Partial<T>): T {
+function localUpdate<T>(table: TableName, id: string, updates: Partial<T>): T {
   const items = localGet<T>(table);
-  const idx = items.findIndex(i => i.id === id);
+  const idx = items.findIndex(i => (i as any).id === id);
   if (idx === -1) throw new Error('Item não encontrado');
-  items[idx] = { ...items[idx], ...updates, updated_at: new Date().toISOString() };
+  items[idx] = { ...items[idx], ...updates, updated_at: new Date().toISOString() } as T;
   localSet(table, items);
   return items[idx];
 }
 
 function localRemove(table: TableName, id: string): void {
-  const items = localGet<Record<string, unknown>>(table);
-  localSet(table, items.filter(i => i.id !== id));
+  const items = localGet<any>(table);
+  localSet(table, items.filter((i: any) => i.id !== id));
 }
 
 // --- Supabase + fallback ---
 
-async function query<T extends Record<string, unknown>>(table: TableName, coupleId: string, options?: {
+async function query<T>(table: TableName, coupleId: string, options?: {
   orderBy?: string;
   ascending?: boolean;
   filters?: Record<string, unknown>;
@@ -109,14 +109,14 @@ async function query<T extends Record<string, unknown>>(table: TableName, couple
   return (data || []) as T[];
 }
 
-async function insert<T extends Record<string, unknown>>(table: TableName, record: Partial<T>): Promise<T> {
+async function insert<T>(table: TableName, record: Partial<T>): Promise<T> {
   if (!supabase) return localInsert<T>(table, record);
   const { data, error } = await supabase.from(table).insert(record as any).select().single();
   if (error) throw error;
   return data as T;
 }
 
-async function update<T extends Record<string, unknown>>(table: TableName, id: string, updates: Partial<T>): Promise<T> {
+async function update<T>(table: TableName, id: string, updates: Partial<T>): Promise<T> {
   if (!supabase) return localUpdate<T>(table, id, updates);
   const { data, error } = await supabase.from(table).update(updates as any).eq('id', id).select().single();
   if (error) throw error;
