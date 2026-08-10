@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Users, Plus, UserPlus, Link2 } from 'lucide-react';
+import { ArrowLeft, Users, Plus, UserPlus, Link2, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Button, Input, Card } from '../components/ui';
@@ -65,6 +65,7 @@ export function CouplePage() {
   }
 
   if (coupleId) {
+    const isDemoCouple = coupleId === 'demo-couple';
     return (
       <div className="p-4 sm:p-6 max-w-lg mx-auto space-y-4">
         <div className="flex items-center gap-3">
@@ -73,6 +74,16 @@ export function CouplePage() {
           </button>
           <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Casal</h1>
         </div>
+        {isDemoCouple && (
+          <Card className="bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+            <div className="flex items-center gap-3">
+              <AlertTriangle size={18} className="text-amber-600 dark:text-amber-400 shrink-0" />
+              <p className="text-sm text-amber-700 dark:text-amber-400">
+                Modo demonstração — configure o Supabase para criar um casal real.
+              </p>
+            </div>
+          </Card>
+        )}
         <Card>
           <div className="flex flex-col items-center py-6 text-center">
             <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
@@ -80,12 +91,16 @@ export function CouplePage() {
             </div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Casal configurado!</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Compartilhe o código abaixo com seu parceiro(a):
+              {isDemoCouple
+                ? 'Gabriel e Rayane — casal de demonstração'
+                : 'Compartilhe o código abaixo com seu parceiro(a):'}
             </p>
-            <div className="mt-4 bg-gray-100 dark:bg-gray-700 rounded-xl px-6 py-3">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Código do casal</p>
-              <p className="text-sm font-mono font-bold text-gray-900 dark:text-gray-100 select-all">{coupleId}</p>
-            </div>
+            {!isDemoCouple && (
+              <div className="mt-4 bg-gray-100 dark:bg-gray-700 rounded-xl px-6 py-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Código do casal</p>
+                <p className="text-sm font-mono font-bold text-gray-900 dark:text-gray-100 select-all">{coupleId}</p>
+              </div>
+            )}
           </div>
         </Card>
       </div>

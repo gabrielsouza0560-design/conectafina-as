@@ -100,11 +100,53 @@ export const accountService = {
   delete: (id: string) => remove('accounts', id),
 };
 
+const DEMO_CATEGORIES: Category[] = [
+  // Entradas
+  { id: 'cat-i-01', couple_id: null, name: 'Salário', type: 'income', icon: 'banknote', color: '#10B981' },
+  { id: 'cat-i-02', couple_id: null, name: 'Vale', type: 'income', icon: 'ticket', color: '#06B6D4' },
+  { id: 'cat-i-03', couple_id: null, name: 'Bonificação', type: 'income', icon: 'gift', color: '#8B5CF6' },
+  { id: 'cat-i-04', couple_id: null, name: 'Renda Extra', type: 'income', icon: 'plus-circle', color: '#F59E0B' },
+  { id: 'cat-i-05', couple_id: null, name: 'Freelance', type: 'income', icon: 'laptop', color: '#3B82F6' },
+  { id: 'cat-i-06', couple_id: null, name: 'Diária', type: 'income', icon: 'clock', color: '#14B8A6' },
+  { id: 'cat-i-07', couple_id: null, name: 'Outros', type: 'income', icon: 'circle-dot', color: '#6B7280' },
+  // Despesas
+  { id: 'cat-e-01', couple_id: null, name: 'Alimentação', type: 'expense', icon: 'utensils', color: '#EF4444' },
+  { id: 'cat-e-02', couple_id: null, name: 'Supermercado', type: 'expense', icon: 'shopping-cart', color: '#F97316' },
+  { id: 'cat-e-03', couple_id: null, name: 'Casa', type: 'expense', icon: 'home', color: '#8B5CF6' },
+  { id: 'cat-e-04', couple_id: null, name: 'Aluguel', type: 'expense', icon: 'building', color: '#6366F1' },
+  { id: 'cat-e-05', couple_id: null, name: 'Energia', type: 'expense', icon: 'zap', color: '#F59E0B' },
+  { id: 'cat-e-06', couple_id: null, name: 'Água', type: 'expense', icon: 'droplets', color: '#06B6D4' },
+  { id: 'cat-e-07', couple_id: null, name: 'Internet', type: 'expense', icon: 'wifi', color: '#3B82F6' },
+  { id: 'cat-e-08', couple_id: null, name: 'Celular', type: 'expense', icon: 'smartphone', color: '#10B981' },
+  { id: 'cat-e-09', couple_id: null, name: 'Transporte', type: 'expense', icon: 'car', color: '#64748B' },
+  { id: 'cat-e-10', couple_id: null, name: 'Combustível', type: 'expense', icon: 'fuel', color: '#78716C' },
+  { id: 'cat-e-11', couple_id: null, name: 'Saúde', type: 'expense', icon: 'heart-pulse', color: '#EC4899' },
+  { id: 'cat-e-12', couple_id: null, name: 'Farmácia', type: 'expense', icon: 'pill', color: '#F43F5E' },
+  { id: 'cat-e-13', couple_id: null, name: 'Educação', type: 'expense', icon: 'graduation-cap', color: '#8B5CF6' },
+  { id: 'cat-e-14', couple_id: null, name: 'Filhos', type: 'expense', icon: 'baby', color: '#A855F7' },
+  { id: 'cat-e-15', couple_id: null, name: 'Roupas', type: 'expense', icon: 'shirt', color: '#E11D48' },
+  { id: 'cat-e-16', couple_id: null, name: 'Lazer', type: 'expense', icon: 'gamepad-2', color: '#D946EF' },
+  { id: 'cat-e-17', couple_id: null, name: 'Delivery', type: 'expense', icon: 'bike', color: '#EF4444' },
+  { id: 'cat-e-18', couple_id: null, name: 'Assinaturas', type: 'expense', icon: 'repeat', color: '#14B8A6' },
+  { id: 'cat-e-19', couple_id: null, name: 'Pet', type: 'expense', icon: 'paw-print', color: '#B45309' },
+  { id: 'cat-e-20', couple_id: null, name: 'Beleza', type: 'expense', icon: 'sparkles', color: '#DB2777' },
+  { id: 'cat-e-21', couple_id: null, name: 'Presentes', type: 'expense', icon: 'gift', color: '#7C3AED' },
+  { id: 'cat-e-22', couple_id: null, name: 'Compras', type: 'expense', icon: 'shopping-bag', color: '#F59E0B' },
+  { id: 'cat-e-23', couple_id: null, name: 'Serviços', type: 'expense', icon: 'wrench', color: '#6366F1' },
+  { id: 'cat-e-24', couple_id: null, name: 'Outros', type: 'expense', icon: 'circle-dot', color: '#6B7280' },
+];
+
 export const categoryService = {
-  list: (coupleId: string) =>
-    query<Category>('categories', coupleId, { orderBy: 'name', ascending: true }),
+  list: async (coupleId: string): Promise<Category[]> => {
+    if (!supabase) return DEMO_CATEGORIES;
+    const [custom, global] = await Promise.all([
+      query<Category>('categories', coupleId, { orderBy: 'name', ascending: true }),
+      categoryService.listGlobal(),
+    ]);
+    return custom.length > 0 ? custom : global.length > 0 ? global : DEMO_CATEGORIES;
+  },
   listGlobal: async (): Promise<Category[]> => {
-    if (!supabase) return [];
+    if (!supabase) return DEMO_CATEGORIES;
     const { data } = await supabase.from('categories').select('*').is('couple_id', null).order('name');
     return (data || []) as Category[];
   },

@@ -36,7 +36,11 @@ export function ProfilePage() {
             <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center text-white text-2xl font-bold">
               {profile?.name?.charAt(0)?.toUpperCase() || '?'}
             </div>
-            <button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-white dark:bg-gray-700 border-2 border-white dark:border-gray-700 shadow flex items-center justify-center">
+            <button
+              onClick={() => alert('Upload de foto estará disponível em breve!')}
+              className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-white dark:bg-gray-700 border-2 border-white dark:border-gray-700 shadow flex items-center justify-center"
+              title="Alterar foto"
+            >
               <Camera size={14} className="text-gray-600 dark:text-gray-400" />
             </button>
           </div>

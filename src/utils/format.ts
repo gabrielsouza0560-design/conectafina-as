@@ -29,7 +29,7 @@ export function getMonthName(month: number): string {
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
   ];
-  return months[month - 1] || '';
+  return months[month] || '';
 }
 
 export function normalizeText(s: string): string {

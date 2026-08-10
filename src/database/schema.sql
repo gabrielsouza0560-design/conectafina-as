@@ -620,20 +620,35 @@ insert into financas.categories (couple_id, name, type, icon, color) values
   (null, 'Vale', 'income', 'ticket', '#06B6D4'),
   (null, 'Bonificação', 'income', 'gift', '#8B5CF6'),
   (null, 'Renda Extra', 'income', 'plus-circle', '#F59E0B'),
-  (null, 'Diária', 'income', 'clock', '#3B82F6'),
+  (null, 'Freelance', 'income', 'laptop', '#3B82F6'),
+  (null, 'Diária', 'income', 'clock', '#14B8A6'),
   (null, 'Outros', 'income', 'circle-dot', '#6B7280');
 
 -- Categorias de despesa
 insert into financas.categories (couple_id, name, type, icon, color) values
   (null, 'Alimentação', 'expense', 'utensils', '#EF4444'),
-  (null, 'Casa', 'expense', 'home', '#F97316'),
-  (null, 'Transporte', 'expense', 'car', '#3B82F6'),
-  (null, 'Saúde', 'expense', 'heart-pulse', '#10B981'),
+  (null, 'Supermercado', 'expense', 'shopping-cart', '#F97316'),
+  (null, 'Casa', 'expense', 'home', '#8B5CF6'),
+  (null, 'Aluguel', 'expense', 'building', '#6366F1'),
+  (null, 'Energia', 'expense', 'zap', '#F59E0B'),
+  (null, 'Água', 'expense', 'droplets', '#06B6D4'),
+  (null, 'Internet', 'expense', 'wifi', '#3B82F6'),
+  (null, 'Celular', 'expense', 'smartphone', '#10B981'),
+  (null, 'Transporte', 'expense', 'car', '#64748B'),
+  (null, 'Combustível', 'expense', 'fuel', '#78716C'),
+  (null, 'Saúde', 'expense', 'heart-pulse', '#EC4899'),
+  (null, 'Farmácia', 'expense', 'pill', '#F43F5E'),
   (null, 'Educação', 'expense', 'graduation-cap', '#8B5CF6'),
-  (null, 'Lazer', 'expense', 'gamepad-2', '#EC4899'),
+  (null, 'Filhos', 'expense', 'baby', '#A855F7'),
+  (null, 'Roupas', 'expense', 'shirt', '#E11D48'),
+  (null, 'Lazer', 'expense', 'gamepad-2', '#D946EF'),
+  (null, 'Delivery', 'expense', 'bike', '#EF4444'),
+  (null, 'Assinaturas', 'expense', 'repeat', '#14B8A6'),
+  (null, 'Pet', 'expense', 'paw-print', '#B45309'),
+  (null, 'Beleza', 'expense', 'sparkles', '#DB2777'),
+  (null, 'Presentes', 'expense', 'gift', '#7C3AED'),
   (null, 'Compras', 'expense', 'shopping-bag', '#F59E0B'),
   (null, 'Serviços', 'expense', 'wrench', '#6366F1'),
-  (null, 'Assinaturas', 'expense', 'repeat', '#14B8A6'),
   (null, 'Outros', 'expense', 'circle-dot', '#6B7280');
 
 -- ============================================================

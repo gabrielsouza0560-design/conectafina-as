@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ChevronLeft, ChevronRight, Circle, CheckCircle, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../hooks/useData';
-import { incomeService, expenseService, fixedExpenseService, cardService } from '../services/api';
+import { incomeService, expenseService, fixedExpenseService, cardTransactionService } from '../services/api';
 import { Card, CardSkeleton } from '../components/ui';
 import { formatCurrency, getMonthName } from '../utils/format';
-import type { Income, Expense, FixedExpense, CreditCard as CardType } from '../types';
+import type { Income, Expense, FixedExpense, CardTransaction } from '../types';
 
 interface DayEvent {
   id: string;
@@ -26,9 +26,9 @@ export function CalendarPage() {
   const { data: incomes, loading: l1 } = useData<Income>((c) => incomeService.list(c));
   const { data: expenses, loading: l2 } = useData<Expense>((c) => expenseService.list(c));
   const { data: bills, loading: l3 } = useData<FixedExpense>((c) => fixedExpenseService.list(c));
-  const { data: _cards } = useData<CardType>((c) => cardService.list(c));
+  const { data: cardTx, loading: l4 } = useData<CardTransaction>((c) => cardTransactionService.list(c));
 
-  const loading = l1 || l2 || l3;
+  const loading = l1 || l2 || l3 || l4;
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDayOfWeek = new Date(year, month, 1).getDay();
@@ -57,8 +57,14 @@ export function CalendarPage() {
       }
     });
 
+    cardTx.filter(c => c.date.startsWith(monthStr)).forEach(c => {
+      const day = parseInt(c.date.split('-')[2]);
+      if (!map[day]) map[day] = [];
+      map[day].push({ id: c.id, type: 'expense', description: c.description, amount: Number(c.amount), status: 'paid' });
+    });
+
     return map;
-  }, [incomes, expenses, bills, monthStr, daysInMonth]);
+  }, [incomes, expenses, bills, cardTx, monthStr, daysInMonth]);
 
   function prevMonth() {
     if (month === 0) { setMonth(11); setYear(y => y - 1); }

@@ -15,6 +15,7 @@ const incomeTypes = [
   { value: 'allowance', label: 'Vale' },
   { value: 'bonus', label: 'Bonificação' },
   { value: 'extra', label: 'Renda Extra' },
+  { value: 'freelance', label: 'Freelance' },
   { value: 'daily', label: 'Diária' },
   { value: 'other', label: 'Outros' },
 ];

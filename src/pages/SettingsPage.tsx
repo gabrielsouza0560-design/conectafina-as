@@ -46,9 +46,9 @@ export function SettingsPage() {
             alert('Abra no Chrome e use "Adicionar à tela inicial" no menu.');
           }
         }},
-        { icon: Download, label: 'Exportar dados', desc: 'Em breve', onClick: () => {} },
-        { icon: Shield, label: 'Privacidade', desc: 'Dados locais e seguros', onClick: () => {} },
-        { icon: Info, label: 'Sobre', desc: 'Conecta Finanças v1.0', onClick: () => {} },
+        { icon: Download, label: 'Exportar dados', desc: 'Em breve', onClick: () => alert('Exportação de dados estará disponível em breve!') },
+        { icon: Shield, label: 'Privacidade', desc: 'Dados locais e seguros', onClick: () => alert('Seus dados são armazenados de forma segura no Supabase. Nenhum dado é compartilhado com terceiros.') },
+        { icon: Info, label: 'Sobre', desc: 'Conecta Finanças v1.0', onClick: () => alert('Conecta Finanças v1.0\nControle financeiro inteligente para casais.\nDesenvolvido com React + Supabase.') },
       ],
     },
   ];

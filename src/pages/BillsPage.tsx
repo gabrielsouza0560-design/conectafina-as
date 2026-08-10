@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Plus, Repeat, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useData } from '../hooks/useData';
@@ -34,12 +34,17 @@ const visibilityOptions = [
 
 export function BillsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { profile, coupleId } = useAuth();
   const { data: bills, loading, refresh } = useData<FixedExpense>(
     (coupleId) => fixedExpenseService.list(coupleId)
   );
 
   const [showForm, setShowForm] = useState(false);
+
+  useEffect(() => {
+    if (location.pathname === '/new/bill') setShowForm(true);
+  }, [location.pathname]);
   const [form, setForm] = useState({
     description: '',
     amount: '',

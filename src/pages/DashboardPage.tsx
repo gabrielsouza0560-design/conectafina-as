@@ -1,26 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import {
   ArrowDownLeft, ArrowUpRight, CreditCard, Wallet, Receipt, Target,
-  Bell, TrendingUp, AlertTriangle, ChevronRight, Plus
+  Bell, TrendingUp, AlertTriangle, ChevronRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Card, CardSkeleton } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
+import { useData } from '../hooks/useData';
+import { incomeService, expenseService, cardTransactionService, fixedExpenseService, goalService } from '../services/api';
 import { formatCurrency } from '../utils/format';
-
-interface DashboardData {
-  balance: number;
-  totalIncome: number;
-  totalExpenses: number;
-  totalCards: number;
-  totalInstallments: number;
-  pendingBills: number;
-  overdueBills: number;
-  goalsProgress: number;
-  alerts: { type: string; message: string }[];
-  insights: string[];
-}
+import type { Income, Expense, CardTransaction, FixedExpense, FinancialGoal } from '../types';
 
 function StatCard({ icon: Icon, label, value, color, onClick }: {
   icon: React.ElementType;
@@ -52,28 +42,68 @@ function StatCard({ icon: Icon, label, value, color, onClick }: {
 
 export function DashboardPage() {
   const navigate = useNavigate();
-  const { profile, coupleId } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [data] = useState<DashboardData>({
-    balance: 0,
-    totalIncome: 0,
-    totalExpenses: 0,
-    totalCards: 0,
-    totalInstallments: 0,
-    pendingBills: 0,
-    overdueBills: 0,
-    goalsProgress: 0,
-    alerts: [],
-    insights: [],
-  });
+  const { profile } = useAuth();
 
-  useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 600);
-    return () => clearTimeout(timer);
-  }, []);
+  const { data: incomes, loading: l1 } = useData<Income>((c) => incomeService.list(c));
+  const { data: expenses, loading: l2 } = useData<Expense>((c) => expenseService.list(c));
+  const { data: cardTx, loading: l3 } = useData<CardTransaction>((c) => cardTransactionService.list(c));
+  const { data: bills, loading: l4 } = useData<FixedExpense>((c) => fixedExpenseService.list(c));
+  const { data: goals, loading: l5 } = useData<FinancialGoal>((c) => goalService.list(c));
+
+  const loading = l1 || l2 || l3 || l4 || l5;
 
   const now = new Date();
+  const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const monthName = now.toLocaleDateString('pt-BR', { month: 'long' });
+  const today = now.toISOString().slice(0, 10);
+
+  const data = useMemo(() => {
+    const monthIncomes = incomes.filter(i => i.date.startsWith(monthStr));
+    const monthExpenses = expenses.filter(e => e.date.startsWith(monthStr));
+    const monthCards = cardTx.filter(c => c.date.startsWith(monthStr));
+    const activeBills = bills.filter(b => b.active);
+
+    const totalIncome = monthIncomes.reduce((s, i) => s + Number(i.amount), 0);
+    const totalExpenses = monthExpenses.reduce((s, e) => s + Number(e.amount), 0);
+    const totalCards = monthCards.reduce((s, c) => s + Number(c.amount), 0);
+    const totalBills = activeBills.reduce((s, b) => s + Number(b.amount), 0);
+
+    const pendingBills = activeBills.length;
+    const overdueBills = monthExpenses.filter(e => e.status === 'overdue').length;
+
+    const totalGoalTarget = goals.reduce((s, g) => s + Number(g.target_amount), 0);
+    const totalGoalCurrent = goals.reduce((s, g) => s + Number(g.current_amount), 0);
+    const goalsProgress = totalGoalTarget > 0 ? Math.round((totalGoalCurrent / totalGoalTarget) * 100) : 0;
+
+    const balance = totalIncome - totalExpenses - totalCards;
+
+    const alerts: { type: string; message: string }[] = [];
+    if (overdueBills > 0) alerts.push({ type: 'overdue', message: `${overdueBills} despesa(s) vencida(s)` });
+
+    activeBills.forEach(b => {
+      const dueDate = new Date(now.getFullYear(), now.getMonth(), b.due_day);
+      const diff = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      if (diff >= 0 && diff <= 3) {
+        alerts.push({ type: 'due_soon', message: `${b.description} vence em ${diff} dia(s)` });
+      }
+    });
+
+    const insights: string[] = [];
+    if (totalIncome > 0 && totalExpenses > 0) {
+      const ratio = totalExpenses / totalIncome;
+      if (ratio > 0.8) insights.push('Suas despesas representam mais de 80% das entradas este mês. Atenção!');
+      else if (ratio < 0.5) insights.push('Parabéns! Você está gastando menos da metade do que ganha.');
+    }
+    if (goals.length > 0 && goalsProgress >= 80) {
+      insights.push('Suas metas estão quase completas! Continue assim.');
+    }
+
+    return {
+      balance, totalIncome, totalExpenses, totalCards,
+      totalInstallments: totalBills, pendingBills, overdueBills,
+      goalsProgress, alerts, insights,
+    };
+  }, [incomes, expenses, cardTx, bills, goals, monthStr, now, today]);
 
   if (loading) {
     return (
@@ -153,7 +183,7 @@ export function DashboardPage() {
             </div>
             <div>
               <p className="text-sm font-semibold text-red-700 dark:text-red-400">
-                {data.overdueBills} {data.overdueBills === 1 ? 'conta vencida' : 'contas vencidas'}
+                {data.overdueBills} {data.overdueBills === 1 ? 'despesa vencida' : 'despesas vencidas'}
               </p>
               <p className="text-xs text-red-600 dark:text-red-400/80">Regularize para evitar juros</p>
             </div>
@@ -162,25 +192,16 @@ export function DashboardPage() {
         </Card>
       )}
 
-      {!coupleId && (
-        <Card className="border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20">
+      {data.alerts.filter(a => a.type === 'due_soon').map((alert, i) => (
+        <Card key={i} className="border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center">
-              <Plus size={20} className="text-white" />
+            <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center">
+              <Bell size={16} className="text-white" />
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-blue-700 dark:text-blue-400">Configure seu ambiente</p>
-              <p className="text-xs text-blue-600 dark:text-blue-400/80">Crie ou entre em um casal para começar</p>
-            </div>
-            <button
-              onClick={() => navigate('/couple')}
-              className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700"
-            >
-              Configurar
-            </button>
+            <p className="text-sm text-amber-700 dark:text-amber-400">{alert.message}</p>
           </div>
         </Card>
-      )}
+      ))}
 
       <Card>
         <div className="flex items-center justify-between mb-3">
@@ -211,9 +232,15 @@ export function DashboardPage() {
           <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Insights</h3>
         </div>
         <div className="space-y-2">
-          <p className="text-sm text-gray-500 dark:text-gray-400 italic">
-            Registre seus primeiros lançamentos para receber insights personalizados.
-          </p>
+          {data.insights.length > 0 ? (
+            data.insights.map((insight, i) => (
+              <p key={i} className="text-sm text-gray-600 dark:text-gray-400">{insight}</p>
+            ))
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+              Registre seus primeiros lançamentos para receber insights personalizados.
+            </p>
+          )}
         </div>
       </Card>
     </div>

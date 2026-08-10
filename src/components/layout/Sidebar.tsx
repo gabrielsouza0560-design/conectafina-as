@@ -1,7 +1,8 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, CreditCard, BarChart3, Wallet, ArrowLeftRight, Target, Calendar,
-  Bell, FileText, Search, Settings, LogOut, PlusCircle, Receipt, Users, Moon, Sun
+  Bell, FileText, Search, Settings, LogOut, PlusCircle, Receipt, Users, Moon, Sun,
+  Clock, ClipboardList
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -14,6 +15,7 @@ const mainLinks = [
   { path: '/cards', icon: CreditCard, label: 'Cartões' },
   { path: '/accounts', icon: Wallet, label: 'Contas Bancárias' },
   { path: '/transfers', icon: ArrowLeftRight, label: 'Transferências' },
+  { path: '/daily', icon: Clock, label: 'Diárias' },
 ];
 
 const secondaryLinks = [
@@ -21,6 +23,7 @@ const secondaryLinks = [
   { path: '/calendar', icon: Calendar, label: 'Calendário' },
   { path: '/stats', icon: BarChart3, label: 'Estatísticas' },
   { path: '/couple', icon: Users, label: 'Casal' },
+  { path: '/reports', icon: ClipboardList, label: 'Relatórios' },
   { path: '/notifications', icon: Bell, label: 'Notificações' },
   { path: '/search', icon: Search, label: 'Busca' },
 ];
