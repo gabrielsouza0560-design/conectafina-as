@@ -60,7 +60,7 @@ export function CardsPage() {
       setShowForm(false);
       setForm({ name: '', bank: '', credit_limit: '', closing_day: '5', due_day: '15', color: '#8B5CF6', shared: false });
       refresh();
-    } catch { alert('Erro ao salvar'); }
+    } catch (err) { alert('Erro ao salvar: ' + (err instanceof Error ? err.message : String(err))); }
     setSaving(false);
   }
 

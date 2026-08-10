@@ -76,8 +76,8 @@ export function BillsPage() {
       setShowForm(false);
       setForm({ description: '', amount: '', due_day: '10', recurrence: 'monthly', visibility: 'shared', notes: '' });
       refresh();
-    } catch {
-      alert('Erro ao salvar');
+    } catch (err) {
+      alert('Erro ao salvar: ' + (err instanceof Error ? err.message : String(err)));
     }
     setSaving(false);
   }

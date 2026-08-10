@@ -49,8 +49,8 @@ export function NewDailyPage() {
       });
       setSaved(true);
       setTimeout(() => navigate('/daily'), 800);
-    } catch {
-      alert('Erro ao salvar');
+    } catch (err) {
+      alert('Erro ao salvar: ' + (err instanceof Error ? err.message : String(err)));
     }
     setSaving(false);
   }

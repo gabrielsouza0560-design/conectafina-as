@@ -67,8 +67,8 @@ export function NewCardPurchasePage() {
       });
       setSaved(true);
       setTimeout(() => navigate('/cards'), 800);
-    } catch {
-      alert('Erro ao salvar');
+    } catch (err) {
+      alert('Erro ao salvar: ' + (err instanceof Error ? err.message : String(err)));
     }
     setSaving(false);
   }

@@ -44,7 +44,7 @@ export function GoalsPage() {
       setShowForm(false);
       setForm({ name: '', target_amount: '', deadline: '', monthly_contribution: '', description: '' });
       refresh();
-    } catch { alert('Erro ao salvar'); }
+    } catch (err) { alert('Erro ao salvar: ' + (err instanceof Error ? err.message : String(err))); }
     setSaving(false);
   }
 

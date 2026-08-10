@@ -66,7 +66,7 @@ export function AccountsPage() {
       setShowForm(false);
       setForm({ name: '', type: 'checking', balance: '0', color: '#3B82F6' });
       refresh();
-    } catch { alert('Erro ao salvar'); }
+    } catch (err) { alert('Erro ao salvar: ' + (err instanceof Error ? err.message : String(err))); }
     setSaving(false);
   }
 

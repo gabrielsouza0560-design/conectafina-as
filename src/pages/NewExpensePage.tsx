@@ -64,8 +64,8 @@ export function NewExpensePage() {
       });
       setSaved(true);
       setTimeout(() => navigate('/expenses'), 800);
-    } catch {
-      alert('Erro ao salvar');
+    } catch (err) {
+      alert('Erro ao salvar: ' + (err instanceof Error ? err.message : String(err)));
     }
     setSaving(false);
   }
