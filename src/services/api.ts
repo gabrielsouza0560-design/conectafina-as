@@ -11,6 +11,16 @@ type TableName = 'income' | 'expenses' | 'fixed_expenses' | 'accounts' | 'catego
 
 // --- localStorage helpers for demo mode ---
 
+function generateId(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
 function localKey(table: TableName) {
   return `conecta_demo_${table}`;
 }
@@ -58,7 +68,7 @@ function localInsert<T>(table: TableName, record: Partial<T>): T {
   const items = localGet<T>(table);
   const newItem = {
     ...record,
-    id: crypto.randomUUID(),
+    id: generateId(),
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   } as T;
