@@ -80,7 +80,7 @@ function importAllData(json: string): { success: boolean; error?: string } {
 export function SettingsPage() {
   const navigate = useNavigate();
   const { theme, toggle: toggleTheme } = useTheme();
-  const { profile, coupleId } = useAuth();
+  const { profile } = useAuth();
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [migrating, setMigrating] = useState(false);
@@ -164,13 +164,30 @@ export function SettingsPage() {
 
   async function handleMigrateToCloud() {
     if (!supabase || !supabaseConfigured) {
-      alert('Supabase não está configurado. A migração para a nuvem não está disponível.');
+      alert('Supabase não está configurado.');
       return;
     }
-    if (!profile || !coupleId) {
-      alert('Você precisa estar logado com uma conta Supabase para migrar. Faça logout e cadastre-se novamente.');
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      alert('Você precisa estar logado. Faça logout e entre novamente.');
       return;
     }
+
+    const { data: prof } = await supabase.from('profiles').select('*').eq('auth_user_id', user.id).single();
+    if (!prof) {
+      alert('Perfil não encontrado no banco. Tente fazer logout e cadastrar novamente.');
+      return;
+    }
+
+    const { data: cm } = await supabase.from('couple_members').select('couple_id').eq('profile_id', prof.id).limit(1).single();
+    if (!cm) {
+      alert('Casal não encontrado. Tente fazer logout e cadastrar novamente.');
+      return;
+    }
+
+    const migCoupleId = cm.couple_id;
+    const migProfileId = prof.id;
 
     const hasData = Object.keys(TABLE_MAP).some(key => {
       const raw = localStorage.getItem(key);
@@ -208,8 +225,8 @@ export function SettingsPage() {
           if (k === 'updated_at') continue;
           row[k] = v;
         }
-        row.couple_id = coupleId;
-        row.profile_id = profile.id;
+        row.couple_id = migCoupleId;
+        row.profile_id = migProfileId;
         delete row.id;
         return row;
       });
