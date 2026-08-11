@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../hooks/useData';
 import { cardTransactionService, cardService, categoryService } from '../services/api';
 import { Button, Input, Select, Card } from '../components/ui';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, parseBRCurrency } from '../utils/format';
 import type { CreditCard, Category } from '../types';
 
 const visibilityOptions = [
@@ -66,7 +66,7 @@ export function NewCardPurchasePage() {
     setForm(f => ({ ...f, [key]: value }));
   }
 
-  const amount = parseFloat(form.amount.replace(',', '.')) || 0;
+  const amount = parseBRCurrency(form.amount) || 0;
   const installments = parseInt(form.total_installments) || 1;
   const installmentAmount = installments > 0 ? amount / installments : 0;
 

@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../hooks/useData';
 import { dailyIncomeService, accountService } from '../services/api';
 import { Button, Input, Select, Card } from '../components/ui';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, parseBRCurrency } from '../utils/format';
 import type { BankAccount } from '../types';
 
 export function NewDailyPage() {
@@ -49,7 +49,7 @@ export function NewDailyPage() {
   }
 
   const quantity = parseInt(form.quantity) || 0;
-  const rate = parseFloat(form.rate.replace(',', '.')) || 0;
+  const rate = parseBRCurrency(form.rate) || 0;
   const total = quantity * rate;
 
   async function handleSave() {

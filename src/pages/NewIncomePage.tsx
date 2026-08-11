@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../hooks/useData';
 import { incomeService, accountService } from '../services/api';
 import { Button, Input, Select, Card } from '../components/ui';
+import { parseBRCurrency } from '../utils/format';
 import type { BankAccount } from '../types';
 
 const incomeTypes = [
@@ -78,7 +79,7 @@ export function NewIncomePage() {
         profile_id: profile.id,
         type: form.type as any,
         description: form.description,
-        amount: parseFloat(form.amount.replace(',', '.')),
+        amount: parseBRCurrency(form.amount) || 0,
         date: form.date,
         account_id: form.account_id || null,
         visibility: form.visibility as any,

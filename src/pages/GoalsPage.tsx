@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../hooks/useData';
 import { goalService } from '../services/api';
 import { Button, Card, CardSkeleton, Modal, Input, EmptyState } from '../components/ui';
-import { formatCurrency, formatDate } from '../utils/format';
+import { formatCurrency, formatDate, parseBRCurrency } from '../utils/format';
 import type { FinancialGoal } from '../types';
 
 export function GoalsPage() {
@@ -37,9 +37,9 @@ export function GoalsPage() {
         couple_id: coupleId,
         profile_id: profile.id,
         name: form.name,
-        target_amount: parseFloat(form.target_amount.replace(',', '.')) || 0,
+        target_amount: parseBRCurrency(form.target_amount) || 0,
         deadline: form.deadline || null,
-        monthly_contribution: form.monthly_contribution ? parseFloat(form.monthly_contribution.replace(',', '.')) : null,
+        monthly_contribution: form.monthly_contribution ? parseBRCurrency(form.monthly_contribution) : null,
         description: form.description || null,
       };
       if (editingId) {
@@ -57,7 +57,7 @@ export function GoalsPage() {
 
   async function handleDeposit() {
     if (!showDeposit || !depositAmount) return;
-    const amount = parseFloat(depositAmount.replace(',', '.'));
+    const amount = parseBRCurrency(depositAmount) || 0;
     if (!amount || amount <= 0) return;
     setSaving(true);
     try {

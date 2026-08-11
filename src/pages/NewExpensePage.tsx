@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../hooks/useData';
 import { expenseService, accountService, categoryService } from '../services/api';
 import { Button, Input, Select, Card } from '../components/ui';
+import { parseBRCurrency } from '../utils/format';
 import type { BankAccount, Category } from '../types';
 
 const visibilityOptions = [
@@ -75,7 +76,7 @@ export function NewExpensePage() {
         couple_id: coupleId,
         profile_id: profile.id,
         description: form.description,
-        amount: parseFloat(form.amount.replace(',', '.')),
+        amount: parseBRCurrency(form.amount) || 0,
         date: form.date,
         category_id: form.category_id || null,
         account_id: form.account_id || null,

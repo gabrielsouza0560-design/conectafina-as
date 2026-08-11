@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../hooks/useData';
 import { accountService } from '../services/api';
 import { Button, Card, CardSkeleton, Modal, Input, Select } from '../components/ui';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, parseBRCurrency } from '../utils/format';
 import type { BankAccount } from '../types';
 
 const accountTypes = [
@@ -61,7 +61,7 @@ export function AccountsPage() {
         couple_id: coupleId,
         name: form.name,
         type: form.type as BankAccount['type'],
-        balance: parseFloat(form.balance.replace(',', '.')) || 0,
+        balance: parseBRCurrency(form.balance) || 0,
         color: form.color,
       };
       if (editingId) {

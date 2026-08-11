@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, CreditCard, ShoppingCart, Pencil } from 'lucide-react';
+import { ArrowLeft, Plus, CreditCard, ShoppingCart, Pencil, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../hooks/useData';
 import { cardService, cardTransactionService, installmentService } from '../services/api';
 import { Button, Card, CardSkeleton, Modal, Input, Select } from '../components/ui';
-import { formatCurrency, formatDate } from '../utils/format';
+import { formatCurrency, formatDate, parseBRCurrency } from '../utils/format';
 import type { CreditCard as CardType, CardTransaction, Installment } from '../types';
 
 const cardColors = [
@@ -73,7 +73,7 @@ export function CardsPage() {
         profile_id: profile.id,
         name: form.name,
         bank: form.bank,
-        credit_limit: parseFloat(form.credit_limit.replace(',', '.')) || 0,
+        credit_limit: parseBRCurrency(form.credit_limit) || 0,
         closing_day: parseInt(form.closing_day) || 5,
         due_day: parseInt(form.due_day) || 15,
         color: form.color,
@@ -107,6 +107,12 @@ export function CardsPage() {
   async function handleDelete(id: string) {
     if (!confirm('Excluir este cartão e todas as compras associadas?')) return;
     await cardService.delete(id);
+    refresh();
+  }
+
+  async function handleDeleteTransaction(id: string) {
+    if (!confirm('Excluir esta compra?')) return;
+    await cardTransactionService.delete(id);
     refresh();
   }
 
@@ -247,11 +253,23 @@ export function CardsPage() {
                 <div className="space-y-2">
                   {transactions.filter(t => t.card_id === selectedCard.id).slice(0, 10).map(t => (
                     <div key={t.id} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
-                      <div>
+                      <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t.description}</p>
                         <p className="text-xs text-gray-400">{formatDate(t.date)} • {t.total_installments}x</p>
                       </div>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(Number(t.amount))}</p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mr-2">{formatCurrency(Number(t.amount))}</p>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); navigate('/edit/card-purchase/' + t.id); }}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(t.id); }}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   ))}
                 </div>

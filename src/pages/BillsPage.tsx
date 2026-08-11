@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { useData } from '../hooks/useData';
 import { fixedExpenseService } from '../services/api';
 import { Button, Card, CardSkeleton, Modal, Input, Select as UISelect } from '../components/ui';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, parseBRCurrency } from '../utils/format';
 import { useAuth } from '../contexts/AuthContext';
 import type { FixedExpense } from '../types';
 
@@ -68,7 +68,7 @@ export function BillsPage() {
         couple_id: coupleId,
         profile_id: profile.id,
         description: form.description,
-        amount: parseFloat(form.amount.replace(',', '.')),
+        amount: parseBRCurrency(form.amount) || 0,
         due_day: parseInt(form.due_day),
         recurrence: form.recurrence as FixedExpense['recurrence'],
         visibility: form.visibility as FixedExpense['visibility'],

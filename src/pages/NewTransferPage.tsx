@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../hooks/useData';
 import { transferService, accountService } from '../services/api';
 import { Button, Input, Select, Card } from '../components/ui';
+import { parseBRCurrency } from '../utils/format';
 import type { BankAccount } from '../types';
 
 export function NewTransferPage() {
@@ -60,7 +61,7 @@ export function NewTransferPage() {
         profile_id: profile.id,
         from_account_id: form.from_account_id,
         to_account_id: form.to_account_id,
-        amount: parseFloat(form.amount.replace(',', '.')),
+        amount: parseBRCurrency(form.amount) || 0,
         date: form.date,
         notes: form.notes || null,
       };
