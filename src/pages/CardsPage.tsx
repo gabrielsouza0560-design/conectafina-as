@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, CreditCard, ShoppingCart, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, CreditCard, ShoppingCart, Pencil, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../hooks/useData';
 import { cardService, cardTransactionService, installmentService } from '../services/api';
 import { Button, Card, CardSkeleton, Modal, Input, Select } from '../components/ui';
-import { formatCurrency, formatDate, parseBRCurrency } from '../utils/format';
+import { formatCurrency, formatDate, parseBRCurrency, getMonthName } from '../utils/format';
 import type { CreditCard as CardType, CardTransaction, Installment } from '../types';
 
 const cardColors = [
@@ -28,6 +28,24 @@ export function CardsPage() {
   const { data: transactions, refresh: refreshTx } = useData<CardTransaction>(
     (coupleId) => cardTransactionService.list(coupleId)
   );
+
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const monthStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
+
+  function prevMonth() {
+    if (selectedMonth === 0) { setSelectedMonth(11); setSelectedYear(y => y - 1); }
+    else setSelectedMonth(m => m - 1);
+  }
+  function nextMonth() {
+    if (selectedMonth === 11) { setSelectedMonth(0); setSelectedYear(y => y + 1); }
+    else setSelectedMonth(m => m + 1);
+  }
+
+  const monthTransactions = useMemo(() =>
+    transactions.filter(t => t.date.startsWith(monthStr)),
+  [transactions, monthStr]);
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -135,7 +153,7 @@ export function CardsPage() {
   }
 
   function getCardUsage(cardId: string) {
-    return transactions
+    return monthTransactions
       .filter(t => t.card_id === cardId)
       .reduce((s, t) => s + Number(t.amount), 0);
   }
@@ -178,6 +196,18 @@ export function CardsPage() {
             <Plus size={16} /> Cartão
           </Button>
         </div>
+      </div>
+
+      <div className="flex items-center justify-center gap-3">
+        <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+          <ChevronLeft size={20} className="text-gray-600 dark:text-gray-400" />
+        </button>
+        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-[140px] text-center">
+          {getMonthName(selectedMonth)} {selectedYear}
+        </span>
+        <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+          <ChevronRight size={20} className="text-gray-600 dark:text-gray-400" />
+        </button>
       </div>
 
       {cards.length === 0 ? (
@@ -284,7 +314,7 @@ export function CardsPage() {
 
             <div>
               {(() => {
-                const cardTx = transactions.filter(t => t.card_id === selectedCard.id);
+                const cardTx = monthTransactions.filter(t => t.card_id === selectedCard.id);
                 const cardTxIds = cardTx.map(t => t.id);
                 const allSelected = cardTx.length > 0 && cardTxIds.every(id => selectedTx.has(id));
                 return (

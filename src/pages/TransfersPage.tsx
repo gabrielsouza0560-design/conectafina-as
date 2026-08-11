@@ -1,10 +1,11 @@
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, ArrowLeftRight, Trash2, Pencil } from 'lucide-react';
+import { ArrowLeft, Plus, ArrowLeftRight, Trash2, Pencil, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useData } from '../hooks/useData';
 import { transferService, accountService } from '../services/api';
 import { Button, Card, CardSkeleton, EmptyState } from '../components/ui';
-import { formatCurrency, formatDate } from '../utils/format';
+import { formatCurrency, formatDate, getMonthName } from '../utils/format';
 import type { Transfer, BankAccount } from '../types';
 
 export function TransfersPage() {
@@ -15,6 +16,27 @@ export function TransfersPage() {
   const { data: accounts } = useData<BankAccount>(
     (coupleId) => accountService.list(coupleId)
   );
+
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+
+  const monthStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
+
+  function prevMonth() {
+    if (selectedMonth === 0) { setSelectedMonth(11); setSelectedYear(y => y - 1); }
+    else setSelectedMonth(m => m - 1);
+  }
+  function nextMonth() {
+    if (selectedMonth === 11) { setSelectedMonth(0); setSelectedYear(y => y + 1); }
+    else setSelectedMonth(m => m + 1);
+  }
+
+  const monthItems = useMemo(() =>
+    transfers.filter(t => t.date.startsWith(monthStr)),
+  [transfers, monthStr]);
+
+  const totalMonth = monthItems.reduce((s, t) => s + Number(t.amount), 0);
 
   function getAccountName(id: string) {
     return accounts.find(a => a.id === id)?.name || 'Conta';
@@ -48,16 +70,35 @@ export function TransfersPage() {
         </Button>
       </div>
 
-      {transfers.length === 0 ? (
+      <div className="flex items-center justify-center gap-3">
+        <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+          <ChevronLeft size={20} className="text-gray-600 dark:text-gray-400" />
+        </button>
+        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-[140px] text-center">
+          {getMonthName(selectedMonth)} {selectedYear}
+        </span>
+        <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+          <ChevronRight size={20} className="text-gray-600 dark:text-gray-400" />
+        </button>
+      </div>
+
+      {totalMonth > 0 && (
+        <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+          <p className="text-xs text-blue-600 dark:text-blue-400">Total transferido</p>
+          <p className="text-lg font-bold text-blue-700 dark:text-blue-300">{formatCurrency(totalMonth)}</p>
+        </Card>
+      )}
+
+      {monthItems.length === 0 ? (
         <EmptyState
           icon={<ArrowLeftRight size={40} />}
           title="Nenhuma transferência"
-          description="Transfira valores entre suas contas."
+          description="Nenhuma transferência neste mês."
           action={<Button size="sm" onClick={() => navigate('/new/transfer')}><Plus size={16} /> Nova transferência</Button>}
         />
       ) : (
         <div className="space-y-2">
-          {transfers.map((t, i) => (
+          {monthItems.map((t, i) => (
             <motion.div
               key={t.id}
               initial={{ opacity: 0, y: 10 }}

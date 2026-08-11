@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Clock, Trash2, CheckCircle, Pencil } from 'lucide-react';
+import { ArrowLeft, Plus, Clock, Trash2, CheckCircle, Pencil, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useData } from '../hooks/useData';
 import { dailyIncomeService } from '../services/api';
@@ -13,19 +13,34 @@ export function DailyIncomePage() {
   const { data: dailies, loading, refresh } = useData<DailyIncome>(
     (coupleId) => dailyIncomeService.list(coupleId)
   );
-  const [filter, setFilter] = useState<'all' | 'paid' | 'pending'>('all');
 
   const now = new Date();
-  const currentMonth = dailies.filter(d => {
-    const dt = new Date(d.date);
-    return dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear();
-  });
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [filter, setFilter] = useState<'all' | 'paid' | 'pending'>('all');
 
-  const filtered = filter === 'all' ? dailies :
-    dailies.filter(d => filter === 'paid' ? d.status === 'paid' : d.status !== 'paid');
+  const monthStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
 
-  const totalMonth = currentMonth.reduce((s, d) => s + Number(d.total), 0);
-  const totalPaid = currentMonth.filter(d => d.status === 'paid').reduce((s, d) => s + Number(d.total), 0);
+  function prevMonth() {
+    if (selectedMonth === 0) { setSelectedMonth(11); setSelectedYear(y => y - 1); }
+    else setSelectedMonth(m => m - 1);
+  }
+  function nextMonth() {
+    if (selectedMonth === 11) { setSelectedMonth(0); setSelectedYear(y => y + 1); }
+    else setSelectedMonth(m => m + 1);
+  }
+
+  const monthItems = useMemo(() =>
+    dailies.filter(d => d.date.startsWith(monthStr)),
+  [dailies, monthStr]);
+
+  const filtered = useMemo(() => {
+    if (filter === 'all') return monthItems;
+    return monthItems.filter(d => filter === 'paid' ? d.status === 'paid' : d.status !== 'paid');
+  }, [monthItems, filter]);
+
+  const totalMonth = monthItems.reduce((s, d) => s + Number(d.total), 0);
+  const totalPaid = monthItems.filter(d => d.status === 'paid').reduce((s, d) => s + Number(d.total), 0);
 
   async function handleDelete(id: string) {
     if (!confirm('Excluir esta diária?')) return;
@@ -55,19 +70,31 @@ export function DailyIncomePage() {
         </Button>
       </div>
 
+      <div className="flex items-center justify-center gap-3">
+        <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+          <ChevronLeft size={20} className="text-gray-600 dark:text-gray-400" />
+        </button>
+        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-[140px] text-center">
+          {getMonthName(selectedMonth)} {selectedYear}
+        </span>
+        <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+          <ChevronRight size={20} className="text-gray-600 dark:text-gray-400" />
+        </button>
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <Card className="bg-gradient-to-r from-cyan-600 to-cyan-700 border-0">
           <div className="text-white">
-            <p className="text-xs text-cyan-200">{getMonthName(now.getMonth())} — Total</p>
+            <p className="text-xs text-cyan-200">Total</p>
             <p className="text-2xl font-bold mt-1">{formatCurrency(totalMonth)}</p>
-            <p className="text-xs text-cyan-200 mt-1">{currentMonth.length} diárias</p>
+            <p className="text-xs text-cyan-200 mt-1">{monthItems.length} diárias</p>
           </div>
         </Card>
         <Card className="bg-gradient-to-r from-green-600 to-green-700 border-0">
           <div className="text-white">
             <p className="text-xs text-green-200">Recebido</p>
             <p className="text-2xl font-bold mt-1">{formatCurrency(totalPaid)}</p>
-            <p className="text-xs text-green-200 mt-1">{currentMonth.filter(d => d.status === 'paid').length} pagas</p>
+            <p className="text-xs text-green-200 mt-1">{monthItems.filter(d => d.status === 'paid').length} pagas</p>
           </div>
         </Card>
       </div>
@@ -92,7 +119,7 @@ export function DailyIncomePage() {
         <EmptyState
           icon={<Clock size={40} />}
           title="Nenhuma diária"
-          description="Registre diárias de trabalho."
+          description="Nenhuma diária neste mês."
           action={<Button size="sm" onClick={() => navigate('/new/daily')}><Plus size={16} /> Nova diária</Button>}
         />
       ) : (

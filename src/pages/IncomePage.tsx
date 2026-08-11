@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Filter } from 'lucide-react';
+import { ArrowLeft, Plus, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { incomeService, accountService } from '../services/api';
 import { TransactionList } from '../components/transactions/TransactionList';
 import { MarkPaidModal } from '../components/transactions/MarkPaidModal';
 import { Button, Card, CardSkeleton, Select } from '../components/ui';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, getMonthName } from '../utils/format';
 import type { Income, BankAccount } from '../types';
 
 const incomeTypes = [
@@ -37,26 +37,44 @@ export function IncomePage() {
     (coupleId) => accountService.list(coupleId)
   );
 
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [filterType, setFilterType] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [markPaidId, setMarkPaidId] = useState<string | null>(null);
 
+  const monthStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
+
+  function prevMonth() {
+    if (selectedMonth === 0) { setSelectedMonth(11); setSelectedYear(y => y - 1); }
+    else setSelectedMonth(m => m - 1);
+  }
+  function nextMonth() {
+    if (selectedMonth === 11) { setSelectedMonth(0); setSelectedYear(y => y + 1); }
+    else setSelectedMonth(m => m + 1);
+  }
+
+  const monthItems = useMemo(() =>
+    items.filter(i => i.date.startsWith(monthStr)),
+  [items, monthStr]);
+
   const filtered = useMemo(() => {
-    return items.filter(i => {
+    return monthItems.filter(i => {
       if (filterType && i.type !== filterType) return false;
       if (filterStatus && i.status !== filterStatus) return false;
       return true;
     });
-  }, [items, filterType, filterStatus]);
+  }, [monthItems, filterType, filterStatus]);
 
   const totalPaid = useMemo(() =>
-    items.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount), 0)
-  , [items]);
+    monthItems.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount), 0)
+  , [monthItems]);
 
   const totalPending = useMemo(() =>
-    items.filter(i => i.status === 'pending' || i.status === 'overdue').reduce((s, i) => s + Number(i.amount), 0)
-  , [items]);
+    monthItems.filter(i => i.status === 'pending' || i.status === 'overdue').reduce((s, i) => s + Number(i.amount), 0)
+  , [monthItems]);
 
   async function handleMarkPaid(accountId?: string) {
     if (!markPaidId) return;
@@ -99,6 +117,18 @@ export function IncomePage() {
         </div>
       </div>
 
+      <div className="flex items-center justify-center gap-3">
+        <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+          <ChevronLeft size={20} className="text-gray-600 dark:text-gray-400" />
+        </button>
+        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-[140px] text-center">
+          {getMonthName(selectedMonth)} {selectedYear}
+        </span>
+        <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+          <ChevronRight size={20} className="text-gray-600 dark:text-gray-400" />
+        </button>
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
           <p className="text-xs text-green-600 dark:text-green-400">Recebido</p>
@@ -133,7 +163,7 @@ export function IncomePage() {
         onMarkPaid={(id) => setMarkPaidId(id)}
         onDelete={handleDelete}
         onEdit={(id) => navigate('/edit/income/' + id)}
-        emptyMessage="Nenhuma entrada registrada. Toque em + para adicionar."
+        emptyMessage="Nenhuma entrada neste mês."
       />
 
       <MarkPaidModal

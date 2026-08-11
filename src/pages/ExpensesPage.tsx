@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Filter } from 'lucide-react';
+import { ArrowLeft, Plus, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { expenseService, accountService, categoryService } from '../services/api';
 import { TransactionList } from '../components/transactions/TransactionList';
 import { MarkPaidModal } from '../components/transactions/MarkPaidModal';
 import { Button, Card, CardSkeleton, Select } from '../components/ui';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, getMonthName } from '../utils/format';
 import type { Expense, BankAccount, Category } from '../types';
 
 const statusFilter = [
@@ -29,30 +29,48 @@ export function ExpensesPage() {
     (coupleId) => categoryService.list(coupleId)
   );
 
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [filterCategory, setFilterCategory] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [markPaidId, setMarkPaidId] = useState<string | null>(null);
 
+  const monthStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
+
+  function prevMonth() {
+    if (selectedMonth === 0) { setSelectedMonth(11); setSelectedYear(y => y - 1); }
+    else setSelectedMonth(m => m - 1);
+  }
+  function nextMonth() {
+    if (selectedMonth === 11) { setSelectedMonth(0); setSelectedYear(y => y + 1); }
+    else setSelectedMonth(m => m + 1);
+  }
+
   const expenseCategories = useMemo(() =>
     categories.filter(c => c.type === 'expense'),
   [categories]);
 
+  const monthItems = useMemo(() =>
+    items.filter(i => i.date.startsWith(monthStr)),
+  [items, monthStr]);
+
   const filtered = useMemo(() => {
-    return items.filter(i => {
+    return monthItems.filter(i => {
       if (filterCategory && i.category_id !== filterCategory) return false;
       if (filterStatus && i.status !== filterStatus) return false;
       return true;
     });
-  }, [items, filterCategory, filterStatus]);
+  }, [monthItems, filterCategory, filterStatus]);
 
   const totalPaid = useMemo(() =>
-    items.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount), 0)
-  , [items]);
+    monthItems.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount), 0)
+  , [monthItems]);
 
   const totalPending = useMemo(() =>
-    items.filter(i => i.status === 'pending' || i.status === 'overdue').reduce((s, i) => s + Number(i.amount), 0)
-  , [items]);
+    monthItems.filter(i => i.status === 'pending' || i.status === 'overdue').reduce((s, i) => s + Number(i.amount), 0)
+  , [monthItems]);
 
   async function handleMarkPaid(accountId?: string, paymentMethod?: string) {
     if (!markPaidId) return;
@@ -95,6 +113,18 @@ export function ExpensesPage() {
         </div>
       </div>
 
+      <div className="flex items-center justify-center gap-3">
+        <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+          <ChevronLeft size={20} className="text-gray-600 dark:text-gray-400" />
+        </button>
+        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-[140px] text-center">
+          {getMonthName(selectedMonth)} {selectedYear}
+        </span>
+        <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+          <ChevronRight size={20} className="text-gray-600 dark:text-gray-400" />
+        </button>
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
           <p className="text-xs text-red-600 dark:text-red-400">Pago</p>
@@ -135,7 +165,7 @@ export function ExpensesPage() {
         onMarkPaid={(id) => setMarkPaidId(id)}
         onDelete={handleDelete}
         onEdit={(id) => navigate('/edit/expense/' + id)}
-        emptyMessage="Nenhuma despesa registrada. Toque em + para adicionar."
+        emptyMessage="Nenhuma despesa neste mês."
       />
 
       <MarkPaidModal
