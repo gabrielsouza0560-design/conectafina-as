@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { supabase, supabaseConfigured } from '../lib/supabase';
+import { migrateDemo } from '../services/api';
 import type { Profile } from '../types';
 import type { User, Session } from '@supabase/supabase-js';
 
@@ -133,6 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           VISIBILITY_OPTIONS[2] = { value: 'household', label: user.partnerName };
           VISIBILITY_LABELS.household = user.partnerName;
         }
+        migrateDemo(user.coupleId, user.profileId);
         return;
       }
     }
@@ -194,6 +196,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       VISIBILITY_LABELS.household = partnerName;
     }
 
+    migrateDemo(coupleId, profileId);
     setState({
       user: null, session: null,
       profile: { id: profileId, auth_user_id: profileId, name, email, avatar_url: null, created_at: newUser.createdAt },
@@ -224,6 +227,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       VISIBILITY_LABELS.household = user.partnerName;
     }
 
+    migrateDemo(user.coupleId, user.profileId);
     setState({
       user: null, session: null,
       profile: { id: user.profileId, auth_user_id: user.profileId, name: user.name, email: user.email, avatar_url: null, created_at: user.createdAt },

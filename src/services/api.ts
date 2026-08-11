@@ -91,6 +91,41 @@ function localRemove(table: TableName, id: string): void {
   localSet(table, items.filter((i: any) => i.id !== id));
 }
 
+const ALL_TABLES: TableName[] = [
+  'income', 'expenses', 'fixed_expenses', 'accounts', 'categories',
+  'cards', 'card_transactions', 'installments', 'transfers',
+  'daily_income', 'financial_goals', 'notifications',
+];
+
+export function migrateDemo(newCoupleId: string, newProfileId: string) {
+  const DEMO_COUPLE = 'demo-couple-001';
+  const DEMO_PROFILE = 'demo-profile-001';
+  const migrationKey = `conecta_migrated_${newCoupleId}`;
+  if (localStorage.getItem(migrationKey)) return;
+
+  let migrated = false;
+  for (const table of ALL_TABLES) {
+    const items = localGet<any>(table);
+    let changed = false;
+    for (const item of items) {
+      if (item.couple_id === DEMO_COUPLE || !item.couple_id) {
+        item.couple_id = newCoupleId;
+        changed = true;
+      }
+      if (item.profile_id === DEMO_PROFILE) {
+        item.profile_id = newProfileId;
+        changed = true;
+      }
+    }
+    if (changed) {
+      localSet(table, items);
+      migrated = true;
+    }
+  }
+
+  if (migrated) localStorage.setItem(migrationKey, 'true');
+}
+
 // --- Supabase + fallback ---
 
 async function query<T>(table: TableName, coupleId: string, options?: {
