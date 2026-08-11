@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, FileSpreadsheet, FileText, TrendingUp, TrendingDown, CreditCard, Calendar, Clock, ArrowLeftRight, Filter } from 'lucide-react';
+import { ArrowLeft, Download, FileSpreadsheet, FileText, TrendingUp, TrendingDown, CreditCard, Calendar, Clock, ArrowLeftRight, Filter, Copy } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../hooks/useData';
 import { incomeService, expenseService, cardTransactionService, fixedExpenseService, cardService, dailyIncomeService, transferService, accountService, categoryService } from '../services/api';
-import { Button, Card, CardSkeleton, Select } from '../components/ui';
+import { Button, Card, CardSkeleton, Select, Modal } from '../components/ui';
 import { formatCurrency, formatDate, getMonthName } from '../utils/format';
 import type { Income, Expense, CardTransaction, FixedExpense, CreditCard as CardType, DailyIncome, Transfer, BankAccount, Category } from '../types';
 import * as XLSX from 'xlsx';
@@ -29,17 +30,28 @@ const visibilityOptions = [
 
 export function ReportsPage() {
   const navigate = useNavigate();
+  const { coupleId } = useAuth();
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedVisibility, setSelectedVisibility] = useState('all');
+  const [showDuplicate, setShowDuplicate] = useState(false);
+  const [targetMonth, setTargetMonth] = useState(() => {
+    const next = now.getMonth() + 1;
+    return next > 11 ? 0 : next;
+  });
+  const [targetYear, setTargetYear] = useState(() => {
+    const next = now.getMonth() + 1;
+    return next > 11 ? now.getFullYear() + 1 : now.getFullYear();
+  });
+  const [duplicating, setDuplicating] = useState(false);
 
-  const { data: incomes, loading: l1 } = useData<Income>((c) => incomeService.list(c));
-  const { data: expenses, loading: l2 } = useData<Expense>((c) => expenseService.list(c));
-  const { data: cardTx, loading: l3 } = useData<CardTransaction>((c) => cardTransactionService.list(c));
+  const { data: incomes, loading: l1, refresh: r1 } = useData<Income>((c) => incomeService.list(c));
+  const { data: expenses, loading: l2, refresh: r2 } = useData<Expense>((c) => expenseService.list(c));
+  const { data: cardTx, loading: l3, refresh: r3 } = useData<CardTransaction>((c) => cardTransactionService.list(c));
   const { data: bills, loading: l4 } = useData<FixedExpense>((c) => fixedExpenseService.list(c));
   const { data: cards, loading: l5 } = useData<CardType>((c) => cardService.list(c));
-  const { data: dailies, loading: l6 } = useData<DailyIncome>((c) => dailyIncomeService.list(c));
+  const { data: dailies, loading: l6, refresh: r6 } = useData<DailyIncome>((c) => dailyIncomeService.list(c));
   const { data: transfers, loading: l7 } = useData<Transfer>((c) => transferService.list(c));
   const { data: accounts, loading: l8 } = useData<BankAccount>((c) => accountService.list(c));
   const { data: categories, loading: l9 } = useData<Category>((c) => categoryService.list(c));
@@ -355,6 +367,78 @@ export function ReportsPage() {
     });
   }
 
+  function replaceMonth(dateStr: string, newMonth: number, newYear: number): string {
+    const d = new Date(dateStr);
+    d.setFullYear(newYear, newMonth, Math.min(d.getDate(), new Date(newYear, newMonth + 1, 0).getDate()));
+    return d.toISOString().slice(0, 10);
+  }
+
+  async function handleDuplicate() {
+    if (!coupleId) return;
+    setDuplicating(true);
+    try {
+      for (const inc of report.monthIncomes) {
+        await incomeService.create({
+          couple_id: coupleId,
+          profile_id: inc.profile_id,
+          description: inc.description,
+          amount: inc.amount,
+          date: replaceMonth(inc.date, targetMonth, targetYear),
+          type: inc.type,
+          category_id: inc.category_id,
+          visibility: inc.visibility,
+          status: 'pending',
+          account_id: inc.account_id,
+        });
+      }
+      for (const exp of report.monthExpenses) {
+        await expenseService.create({
+          couple_id: coupleId,
+          profile_id: exp.profile_id,
+          description: exp.description,
+          amount: exp.amount,
+          date: replaceMonth(exp.date, targetMonth, targetYear),
+          category_id: exp.category_id,
+          visibility: exp.visibility,
+          status: 'pending',
+          payment_method: exp.payment_method,
+        });
+      }
+      for (const ct of report.monthCards) {
+        await cardTransactionService.create({
+          couple_id: coupleId,
+          profile_id: ct.profile_id,
+          card_id: ct.card_id,
+          description: ct.description,
+          amount: ct.amount,
+          date: replaceMonth(ct.date, targetMonth, targetYear),
+          category_id: ct.category_id,
+          visibility: ct.visibility,
+          total_installments: ct.total_installments,
+        });
+      }
+      for (const d of report.monthDailies) {
+        await dailyIncomeService.create({
+          couple_id: coupleId,
+          profile_id: d.profile_id,
+          description: d.description,
+          quantity: d.quantity,
+          rate: d.rate,
+          total: d.total,
+          date: replaceMonth(d.date, targetMonth, targetYear),
+          status: 'pending',
+        });
+      }
+      await Promise.all([r1(), r2(), r3(), r6()]);
+      setShowDuplicate(false);
+      alert(`Dados de ${getMonthName(selectedMonth)} duplicados para ${getMonthName(targetMonth)}/${targetYear}!`);
+    } catch (err) {
+      alert('Erro ao duplicar: ' + (err instanceof Error ? err.message : 'Erro desconhecido'));
+    } finally {
+      setDuplicating(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-4">
@@ -373,6 +457,9 @@ export function ReportsPage() {
           <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Relatórios</h1>
         </div>
         <div className="flex gap-1.5">
+          <Button size="sm" variant="secondary" onClick={() => setShowDuplicate(true)}>
+            <Copy size={14} /> Duplicar
+          </Button>
           <Button size="sm" variant="secondary" onClick={exportExcel}>
             <FileSpreadsheet size={14} /> Excel
           </Button>
@@ -690,6 +777,45 @@ export function ReportsPage() {
           </Card>
         </motion.div>
       )}
+
+      {/* Modal Duplicar Mês */}
+      <Modal open={showDuplicate} onClose={() => setShowDuplicate(false)} title="Duplicar Mês">
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Copiar todos os lançamentos de <strong>{getMonthName(selectedMonth)}/{selectedYear}</strong> para outro mês.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <Select
+              label="Mês destino"
+              options={monthOptions}
+              value={String(targetMonth)}
+              onChange={e => setTargetMonth(parseInt(e.target.value))}
+            />
+            <Select
+              label="Ano destino"
+              options={yearOptions}
+              value={String(targetYear)}
+              onChange={e => setTargetYear(parseInt(e.target.value))}
+            />
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-1">
+            <p>Serão duplicados:</p>
+            <p>• {report.incomeCount} entrada(s)</p>
+            <p>• {report.expenseCount} despesa(s)</p>
+            <p>• {report.cardCount} compra(s) de cartão</p>
+            <p>• {report.dailyCount} diária(s)</p>
+            <p className="mt-2 text-amber-600 dark:text-amber-400">Status será definido como "Pendente"</p>
+          </div>
+          <div className="flex gap-3">
+            <Button variant="secondary" onClick={() => setShowDuplicate(false)} className="flex-1">
+              Cancelar
+            </Button>
+            <Button onClick={handleDuplicate} loading={duplicating} className="flex-1">
+              <Copy size={14} /> Duplicar
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
