@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Moon, Sun, User, Heart, Bell, Shield, Smartphone, Download, Upload, Info } from 'lucide-react';
+import { ArrowLeft, Moon, Sun, User, Heart, Bell, Shield, Smartphone, Download, Upload, CloudUpload, Info } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase, supabaseConfigured } from '../lib/supabase';
 import { Card } from '../components/ui';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -27,6 +28,21 @@ const DATA_TABLES = [
   'conecta_auth',
   'cf-theme',
 ];
+
+const TABLE_MAP: Record<string, string> = {
+  conecta_demo_income: 'income',
+  conecta_demo_expenses: 'expenses',
+  conecta_demo_fixed_expenses: 'fixed_expenses',
+  conecta_demo_accounts: 'accounts',
+  conecta_demo_categories: 'categories',
+  conecta_demo_cards: 'cards',
+  conecta_demo_card_transactions: 'card_transactions',
+  conecta_demo_installments: 'installments',
+  conecta_demo_transfers: 'transfers',
+  conecta_demo_daily_income: 'daily_income',
+  conecta_demo_financial_goals: 'financial_goals',
+  conecta_demo_notifications: 'notifications',
+};
 
 function exportAllData(): string {
   const data: Record<string, unknown> = {};
@@ -64,9 +80,11 @@ function importAllData(json: string): { success: boolean; error?: string } {
 export function SettingsPage() {
   const navigate = useNavigate();
   const { theme, toggle: toggleTheme } = useTheme();
-  const { profile } = useAuth();
+  const { profile, coupleId } = useAuth();
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [migrating, setMigrating] = useState(false);
+  const [migrationResult, setMigrationResult] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -144,6 +162,86 @@ export function SettingsPage() {
     e.target.value = '';
   }
 
+  async function handleMigrateToCloud() {
+    if (!supabase || !supabaseConfigured) {
+      alert('Supabase não está configurado. A migração para a nuvem não está disponível.');
+      return;
+    }
+    if (!profile || !coupleId) {
+      alert('Você precisa estar logado com uma conta Supabase para migrar. Faça logout e cadastre-se novamente.');
+      return;
+    }
+
+    const hasData = Object.keys(TABLE_MAP).some(key => {
+      const raw = localStorage.getItem(key);
+      if (!raw) return false;
+      try { const arr = JSON.parse(raw); return Array.isArray(arr) && arr.length > 0; } catch { return false; }
+    });
+
+    if (!hasData) {
+      alert('Não há dados locais para migrar.');
+      return;
+    }
+
+    if (!confirm('Isso vai enviar todos os dados salvos neste dispositivo para a nuvem (Supabase).\n\nDados existentes na nuvem NÃO serão apagados.\n\nContinuar?')) {
+      return;
+    }
+
+    setMigrating(true);
+    setMigrationResult(null);
+
+    let totalMigrated = 0;
+    let totalErrors = 0;
+    const details: string[] = [];
+
+    for (const [localKey, supabaseTable] of Object.entries(TABLE_MAP)) {
+      const raw = localStorage.getItem(localKey);
+      if (!raw) continue;
+
+      let items: Record<string, unknown>[];
+      try { items = JSON.parse(raw); } catch { continue; }
+      if (!Array.isArray(items) || items.length === 0) continue;
+
+      const cleaned = items.map(item => {
+        const row: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(item)) {
+          if (k === 'updated_at') continue;
+          row[k] = v;
+        }
+        row.couple_id = coupleId;
+        row.profile_id = profile.id;
+        delete row.id;
+        return row;
+      });
+
+      const { error, data } = await supabase.from(supabaseTable).insert(cleaned).select('id');
+
+      if (error) {
+        totalErrors++;
+        details.push(`${supabaseTable}: ERRO - ${error.message}`);
+      } else {
+        const count = data?.length ?? cleaned.length;
+        totalMigrated += count;
+        details.push(`${supabaseTable}: ${count} registros migrados`);
+      }
+    }
+
+    setMigrating(false);
+
+    const summary = `Migração concluída!\n\n${details.join('\n')}\n\nTotal: ${totalMigrated} registros migrados, ${totalErrors} erros.`;
+    setMigrationResult(summary);
+    alert(summary);
+  }
+
+  const hasLocalData = Object.keys(TABLE_MAP).some(key => {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return false;
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) && arr.length > 0;
+    } catch { return false; }
+  });
+
   const sections = [
     {
       title: 'Conta',
@@ -174,6 +272,13 @@ export function SettingsPage() {
     {
       title: 'Dados',
       items: [
+        ...(supabaseConfigured && hasLocalData ? [{
+          icon: CloudUpload,
+          label: migrating ? 'Migrando...' : 'Migrar para a nuvem',
+          desc: migrating ? 'Enviando dados para o Supabase...' : 'Enviar dados locais para o Supabase',
+          onClick: handleMigrateToCloud,
+          highlight: true,
+        }] : []),
         { icon: Download, label: 'Exportar backup', desc: 'Salvar todos os dados em arquivo JSON', onClick: handleExport, highlight: false },
         { icon: Upload, label: 'Importar backup', desc: 'Restaurar dados de outro dispositivo', onClick: handleImportClick, highlight: false },
       ],
@@ -211,6 +316,12 @@ export function SettingsPage() {
         className="hidden"
       />
 
+      {migrationResult && (
+        <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+          <p className="text-sm text-green-800 dark:text-green-200 whitespace-pre-line">{migrationResult}</p>
+        </Card>
+      )}
+
       {sections.map((section) => (
         <div key={section.title}>
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-1">{section.title}</h2>
@@ -219,9 +330,10 @@ export function SettingsPage() {
               <button
                 key={item.label}
                 onClick={item.onClick}
+                disabled={'label' in item && item.label === 'Migrando...'}
                 className={`w-full flex items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left ${
                   'highlight' in item && item.highlight ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-                }`}
+                } ${'label' in item && item.label === 'Migrando...' ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
                   'highlight' in item && item.highlight
