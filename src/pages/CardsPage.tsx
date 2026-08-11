@@ -25,7 +25,7 @@ export function CardsPage() {
   const { data: cards, loading, refresh } = useData<CardType>(
     (coupleId) => cardService.list(coupleId)
   );
-  const { data: transactions } = useData<CardTransaction>(
+  const { data: transactions, refresh: refreshTx } = useData<CardTransaction>(
     (coupleId) => cardTransactionService.list(coupleId)
   );
 
@@ -114,6 +114,7 @@ export function CardsPage() {
     if (!confirm('Excluir esta compra?')) return;
     await cardTransactionService.delete(id);
     refresh();
+    refreshTx();
   }
 
   if (loading) {
@@ -246,12 +247,12 @@ export function CardsPage() {
             </div>
 
             <div>
-              <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Compras recentes</h4>
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Compras ({transactions.filter(t => t.card_id === selectedCard.id).length})</h4>
               {transactions.filter(t => t.card_id === selectedCard.id).length === 0 ? (
                 <p className="text-sm text-gray-400 py-4 text-center">Nenhuma compra neste cartão</p>
               ) : (
-                <div className="space-y-2">
-                  {transactions.filter(t => t.card_id === selectedCard.id).slice(0, 10).map(t => (
+                <div className="space-y-2 max-h-80 overflow-y-auto">
+                  {transactions.filter(t => t.card_id === selectedCard.id).map(t => (
                     <div key={t.id} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t.description}</p>
