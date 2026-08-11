@@ -38,6 +38,8 @@ export function CardsPage() {
     color: '#8B5CF6', shared: false,
   });
   const [saving, setSaving] = useState(false);
+  const [selectedTx, setSelectedTx] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
 
   function set(key: string, value: string | boolean) {
     setForm(f => ({ ...f, [key]: value }));
@@ -90,8 +92,42 @@ export function CardsPage() {
     setSaving(false);
   }
 
+  function toggleTx(id: string) {
+    setSelectedTx(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAllTx(cardTxIds: string[]) {
+    setSelectedTx(prev => {
+      const allSelected = cardTxIds.every(id => prev.has(id));
+      if (allSelected) return new Set();
+      return new Set(cardTxIds);
+    });
+  }
+
+  async function handleDeleteSelected() {
+    if (selectedTx.size === 0) return;
+    if (!confirm(`Excluir ${selectedTx.size} compra(s) selecionada(s)?`)) return;
+    setDeleting(true);
+    try {
+      for (const id of selectedTx) {
+        await cardTransactionService.delete(id);
+      }
+      setSelectedTx(new Set());
+      refresh();
+      refreshTx();
+    } catch (err) {
+      alert('Erro ao excluir: ' + (err instanceof Error ? err.message : String(err)));
+    }
+    setDeleting(false);
+  }
+
   async function viewCard(card: CardType) {
     setSelectedCard(card);
+    setSelectedTx(new Set());
     try {
       const inst = await installmentService.listByCard(card.id);
       setCardInstallments(inst);
@@ -247,34 +283,69 @@ export function CardsPage() {
             </div>
 
             <div>
-              <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Compras ({transactions.filter(t => t.card_id === selectedCard.id).length})</h4>
-              {transactions.filter(t => t.card_id === selectedCard.id).length === 0 ? (
-                <p className="text-sm text-gray-400 py-4 text-center">Nenhuma compra neste cartão</p>
-              ) : (
-                <div className="space-y-2 max-h-80 overflow-y-auto">
-                  {transactions.filter(t => t.card_id === selectedCard.id).map(t => (
-                    <div key={t.id} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t.description}</p>
-                        <p className="text-xs text-gray-400">{formatDate(t.date)} • {t.total_installments}x</p>
-                      </div>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mr-2">{formatCurrency(Number(t.amount))}</p>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); navigate('/edit/card-purchase/' + t.id); }}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(t.id); }}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+              {(() => {
+                const cardTx = transactions.filter(t => t.card_id === selectedCard.id);
+                const cardTxIds = cardTx.map(t => t.id);
+                const allSelected = cardTx.length > 0 && cardTxIds.every(id => selectedTx.has(id));
+                return (
+                  <>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Compras ({cardTx.length})</h4>
+                      {cardTx.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          {selectedTx.size > 0 && (
+                            <Button size="sm" variant="danger" onClick={handleDeleteSelected} loading={deleting}>
+                              <Trash2 size={14} /> Apagar {selectedTx.size}
+                            </Button>
+                          )}
+                          <label className="flex items-center gap-1.5 cursor-pointer text-xs text-gray-500 dark:text-gray-400">
+                            <input
+                              type="checkbox"
+                              checked={allSelected}
+                              onChange={() => toggleAllTx(cardTxIds)}
+                              className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            Todos
+                          </label>
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              )}
+                    {cardTx.length === 0 ? (
+                      <p className="text-sm text-gray-400 py-4 text-center">Nenhuma compra neste cartão</p>
+                    ) : (
+                      <div className="space-y-2 max-h-80 overflow-y-auto">
+                        {cardTx.map(t => (
+                          <div key={t.id} className={`flex items-center gap-2 py-2 border-b border-gray-100 dark:border-gray-700 last:border-0 ${selectedTx.has(t.id) ? 'bg-red-50 dark:bg-red-900/10 rounded-lg px-2 -mx-2' : ''}`}>
+                            <input
+                              type="checkbox"
+                              checked={selectedTx.has(t.id)}
+                              onChange={() => toggleTx(t.id)}
+                              className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t.description}</p>
+                              <p className="text-xs text-gray-400">{formatDate(t.date)} • {t.total_installments}x</p>
+                            </div>
+                            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mr-1">{formatCurrency(Number(t.amount))}</p>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); navigate('/edit/card-purchase/' + t.id); }}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(t.id); }}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
 
             {cardInstallments.length > 0 && (
