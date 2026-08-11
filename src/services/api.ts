@@ -98,32 +98,26 @@ const ALL_TABLES: TableName[] = [
 ];
 
 export function migrateDemo(newCoupleId: string, newProfileId: string) {
-  const DEMO_COUPLE = 'demo-couple-001';
-  const DEMO_PROFILE = 'demo-profile-001';
-  const migrationKey = `conecta_migrated_${newCoupleId}`;
-  if (localStorage.getItem(migrationKey)) return;
+  const DEMO_COUPLES = ['demo-couple-001', 'demo-couple'];
+  const DEMO_PROFILES = ['demo-profile-001', 'demo-profile'];
 
-  let migrated = false;
   for (const table of ALL_TABLES) {
     const items = localGet<any>(table);
     let changed = false;
     for (const item of items) {
-      if (item.couple_id === DEMO_COUPLE || !item.couple_id) {
+      if (DEMO_COUPLES.includes(item.couple_id) || !item.couple_id) {
         item.couple_id = newCoupleId;
         changed = true;
       }
-      if (item.profile_id === DEMO_PROFILE) {
+      if (DEMO_PROFILES.includes(item.profile_id) || !item.profile_id) {
         item.profile_id = newProfileId;
         changed = true;
       }
     }
     if (changed) {
       localSet(table, items);
-      migrated = true;
     }
   }
-
-  if (migrated) localStorage.setItem(migrationKey, 'true');
 }
 
 // --- Supabase + fallback ---
